@@ -144,7 +144,7 @@ function newCareer(name, pos, origin) {
   S = {
     name, pos, origin, age: 16, ovr: 50 + o.o, rep: 10, mor: 60, money: o.money,
     club: 0, v2: 1, goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [0],
-    last: null, offer: null, peak: 50 + o.o
+    last: null, offers: [], peak: 50 + o.o
   };
   pickEvent(); save(); go('career');
 }
@@ -172,10 +172,11 @@ function playSeason() {
   S.money += Math.round(c.l / 6 * (1 + S.rep / 100));
   S.peak = Math.max(S.peak, S.ovr);
 
-  // Offre de transfert : un club plus fort (jusqu'à +10 de niveau), plafonné par la réputation
-  const cur = c.l;
-  const cand = CLUBS.map((x, i) => i).filter(i => CLUBS[i].l > cur && CLUBS[i].l <= Math.min(cur + 10, 55 + S.rep * 0.42));
-  S.offer = cand.length && Math.random() < 0.6 ? cand[rnd(0, cand.length - 1)] : null;
+  // Offres : jusqu'à 3 clubs (plus forts ; après 31 ans, aussi des clubs un peu moins forts)
+  const lo = S.age >= 31 ? c.l - 12 : c.l + 1;
+  const cand = CLUBS.map((x, i) => i).filter(i => i !== S.club && CLUBS[i].l >= lo && CLUBS[i].l <= Math.min(c.l + 10, 55 + S.rep * 0.42));
+  cand.sort(() => Math.random() - 0.5);
+  S.offers = Math.random() < 0.75 ? cand.slice(0, rnd(1, 3)) : [];
 
   S.last = { perf, g, out };
   S.phase = 'result';
@@ -183,14 +184,21 @@ function playSeason() {
   checkBadges(); save(); render();
 }
 
-function transfer(accept) {
-  if (accept) {
-    S.club = S.offer;
+function transfer(i) {
+  if (i >= 0) {
+    S.club = S.offers[i];
     if (!S.visited.includes(S.club)) S.visited.push(S.club);
     track('transfers');
   }
-  S.offer = null;
+  S.offers = [];
   checkBadges(); save(); nextSeason();
+}
+
+function retire() {
+  S.phase = 'end';
+  H.unshift({ name: S.name, pos: S.pos, goals: S.goals, bd: S.bd, trophies: S.trophies.length, peak: S.peak, club: CLUBS[S.club].n });
+  localStorage.setItem('g11h', JSON.stringify(H));
+  checkBadges(); save(); render();
 }
 
 function nextSeason() {
@@ -199,14 +207,8 @@ function nextSeason() {
   else if (S.age <= 28) S.ovr += rnd(0, 2);
   else if (S.age >= 31) S.ovr -= rnd(1, 3);
   S.ovr = clamp(S.ovr, 30, 99);
-  if (S.age >= 35) {
-    S.phase = 'end';
-    H.unshift({ name: S.name, pos: S.pos, goals: S.goals, bd: S.bd, trophies: S.trophies.length, peak: S.peak, club: CLUBS[S.club].n });
-    localStorage.setItem('g11h', JSON.stringify(H));
-    checkBadges();
-  } else {
-    S.phase = 'event'; S.last = null; pickEvent();
-  }
+  if (S.age > 40) { retire(); return; }
+  S.phase = 'event'; S.last = null; pickEvent();
   save(); render();
 }
 
@@ -217,6 +219,7 @@ const statsCard = () => `
     <h2>${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
     <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
     ${bar('Niveau', S.ovr)}${bar('Réputation', S.rep)}${bar('Moral', S.mor)}
+    ${S.phase !== 'end' && S.age >= 30 ? `<br><button class="ghost" onclick="if (confirm('Prendre ta retraite ?')) retire()">🏁 Prendre ma retraite</button>` : ''}
   </div>`;
 
 const views = {
@@ -248,14 +251,14 @@ const views = {
       return statsCard() + `<div class="card"><h2>Saison ${S.age - 15}</h2><p>${e.t}</p>
         <div class="choices">${e.c.map((c, i) => `<button onclick="chooseEvent(${i})">${c[0]}</button>`).join('')}</div></div>`;
     }
-    const L = S.last;
+    const L = S.last, offers = S.offers || [];
     return statsCard() + `<div class="card"><h2>Bilan de saison</h2>
       <div class="big">${L.perf}</div><p class="muted">note de performance · ${L.g} buts</p>
       ${L.out.map(o => `<span class="tag">${o}</span>`).join('') || '<p class="muted">Pas de trophée cette saison.</p>'}
-      <br><br>${S.offer !== null
-        ? `<p>📩 <b>${CLUBS[S.offer].f} ${CLUBS[S.offer].n}</b> te propose un contrat !</p><div class="choices">
-           <button onclick="transfer(true)">Accepter le transfert</button>
-           <button onclick="transfer(false)">Rester à ${CLUBS[S.club].n}</button></div>`
+      <br><br>${offers.length
+        ? `<p>📩 ${offers.length > 1 ? 'Plusieurs clubs te contactent' : 'Un club te contacte'} :</p><div class="choices">
+           ${offers.map((o, i) => `<button onclick="transfer(${i})">${CLUBS[o].f} ${CLUBS[o].n} <span class="muted">(niveau ${CLUBS[o].l})</span></button>`).join('')}
+           <button onclick="transfer(-1)">Rester à ${CLUBS[S.club].n}</button></div>`
         : `<button onclick="nextSeason()">Saison suivante</button>`}</div>`;
   },
 
@@ -299,13 +302,13 @@ document.querySelector('#theme').onclick = () =>
 setTheme(localStorage.getItem('g11t') || 'golden');
 
 // Compatibilité avec les anciennes sauvegardes
-if (S) { S.seen = S.seen || []; S.visited = S.visited || [S.club]; }
+if (S) { S.seen = S.seen || []; S.visited = S.visited || [S.club]; S.offers = S.offers || []; }
 
 // Migration : l'ancienne liste de 7 clubs vers la nouvelle liste de 34
 if (S && !S.v2) {
   const OLD = ['Académie de Saint-Brieuc', 'Stade Brestois', 'Olympique Lyonnais', 'AS Monaco', 'Arsenal', 'FC Barcelone', 'Real Madrid'];
   const m = i => CLUBS.findIndex(c => c.n === OLD[i]);
-  S.club = m(S.club); S.visited = S.visited.map(m); S.offer = null; S.v2 = 1; save();
+  S.club = m(S.club); S.visited = S.visited.map(m); S.offers = []; S.v2 = 1; save();
 }
 
 initQuests();
