@@ -50,3 +50,17 @@ input, select {
 .big { font-family: var(--title); font-size: 44px; color: var(--accent); }
 .tag { display: inline-block; padding: 4px 10px; border: 1px solid var(--accent); color: var(--accent); border-radius: 20px; font-size: 12px; margin: 4px 4px 0 0; }
 .muted { color: var(--muted); }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: var(--bg); padding: 12px 22px;
+  border-radius: 30px; font-weight: 700; z-index: 10; animation: fade .3s;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+}
+.badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.badge { text-align: center; padding: 16px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.badge .ic { font-size: 32px; }
+.badge small { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.badge.off { opacity: .35; filter: grayscale(1); }
+.quest { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.quest.done { border-color: var(--accent); }
