@@ -64,3 +64,9 @@ input, select {
 .badge.off { opacity: .35; filter: grayscale(1); }
 .quest { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .quest.done { border-color: var(--accent); }
+
+.pitch { background: var(--hero); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.line { display: flex; justify-content: space-around; gap: 8px; margin: 14px 0; flex-wrap: wrap; }
+.pl { background: var(--card); border: 1px solid var(--accent); border-radius: 10px; padding: 6px 10px; font-size: 12px; text-align: center; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+button.sm { padding: 6px 12px; font-size: 12px; margin: 2px; }
