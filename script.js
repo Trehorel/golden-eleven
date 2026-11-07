@@ -13,9 +13,24 @@ const save = () => localStorage.setItem('g11', JSON.stringify(S));
 const saveQ = () => localStorage.setItem('g11q', JSON.stringify(Q));
 
 const CLUBS = [
-  { n: 'Académie de Saint-Brieuc', l: 55 }, { n: 'Stade Brestois', l: 65 },
-  { n: 'Olympique Lyonnais', l: 74 }, { n: 'AS Monaco', l: 78 },
-  { n: 'Arsenal', l: 84 }, { n: 'FC Barcelone', l: 89 }, { n: 'Real Madrid', l: 92 }
+  { n: 'Académie de Saint-Brieuc', l: 55, f: '🇫🇷' }, { n: 'Angers SCO', l: 58, f: '🇫🇷' },
+  { n: 'FC Lorient', l: 60, f: '🇫🇷' }, { n: 'Southampton', l: 62, f: '🇬🇧' },
+  { n: 'Getafe', l: 63, f: '🇪🇸' }, { n: 'Genoa', l: 64, f: '🇮🇹' },
+  { n: 'Stade Brestois', l: 65, f: '🇫🇷' }, { n: 'Stade Rennais', l: 66, f: '🇫🇷' },
+  { n: 'Werder Brême', l: 67, f: '🇩🇪' }, { n: 'Villarreal', l: 68, f: '🇪🇸' },
+  { n: 'Feyenoord', l: 69, f: '🇳🇱' }, { n: 'OGC Nice', l: 70, f: '🇫🇷' },
+  { n: 'Benfica', l: 71, f: '🇵🇹' }, { n: 'Atalanta', l: 72, f: '🇮🇹' },
+  { n: 'LOSC Lille', l: 73, f: '🇫🇷' }, { n: 'Olympique Lyonnais', l: 74, f: '🇫🇷' },
+  { n: 'Ajax', l: 75, f: '🇳🇱' }, { n: 'Olympique de Marseille', l: 76, f: '🇫🇷' },
+  { n: 'FC Porto', l: 77, f: '🇵🇹' }, { n: 'AS Monaco', l: 78, f: '🇫🇷' },
+  { n: 'AC Milan', l: 79, f: '🇮🇹' }, { n: 'Tottenham', l: 80, f: '🇬🇧' },
+  { n: 'Borussia Dortmund', l: 81, f: '🇩🇪' }, { n: 'Juventus', l: 82, f: '🇮🇹' },
+  { n: 'Atlético de Madrid', l: 83, f: '🇪🇸' }, { n: 'Arsenal', l: 84, f: '🇬🇧' },
+  { n: 'Inter Milan', l: 85, f: '🇮🇹' }, { n: 'Bayern Munich', l: 86, f: '🇩🇪' },
+  { n: 'Chelsea', l: 87, f: '🇬🇧' }, { n: 'Manchester United', l: 88, f: '🇬🇧' },
+  { n: 'FC Barcelone', l: 89, f: '🇪🇸' }, { n: 'Paris Saint-Germain', l: 90, f: '🇫🇷' },
+  { n: 'Liverpool', l: 91, f: '🇬🇧' }, { n: 'Real Madrid', l: 92, f: '🇪🇸' },
+  { n: 'Manchester City', l: 93, f: '🇬🇧' }
 ];
 const POSTES = { ATT: 'Attaquant', MIL: 'Milieu', DEF: 'Défenseur', GAR: 'Gardien' };
 const GOALS = { ATT: 0.5, MIL: 0.2, DEF: 0.06, GAR: 0 };
@@ -32,14 +47,14 @@ const EVENTS = [
   { t: 'Une marque de sport vous propose un contrat.', w: s => s.rep >= 25, c: [['Signer', { r: 4, $: 3 }], ['Refuser et se concentrer', { o: 2, m: 5 }]] },
   { t: 'Le coach propose un programme spécial.', c: [['Travailler dur', { o: 3, m: -5 }], ['Rester tranquille', { m: 8 }]] },
   { t: 'Polémique sur les réseaux sociaux.', w: s => s.rep >= 30, c: [['Répondre', { r: -2, m: -5 }], ['Ignorer', { m: 3 }]] },
-  { t: 'Le capitaine vous confie le brassard.', w: s => s.club >= 1 && s.rep >= 40, c: [['Accepter', { r: 3, m: 5 }], ['Décliner', { o: 1 }]] },
+  { t: 'Le capitaine vous confie le brassard.', w: s => CLUBS[s.club].l >= 60 && s.rep >= 40, c: [['Accepter', { r: 3, m: 5 }], ['Décliner', { o: 1 }]] },
   { t: 'Le sélectionneur vous appelle en équipe nationale.', w: s => s.rep >= 45, c: [['Répondre présent', { r: 4, o: 1, m: -5 }], ['Se ménager pour le club', { m: 5, o: 1 }]] },
-  { t: 'Un coéquipier vous défie ouvertement dans le vestiaire.', w: s => s.club >= 1, c: [['Répondre sur le terrain', { o: 2, m: -3 }], ['Calmer le jeu', { m: 4, r: 1 }]] },
+  { t: 'Un coéquipier vous défie ouvertement dans le vestiaire.', w: s => CLUBS[s.club].l >= 60, c: [['Répondre sur le terrain', { o: 2, m: -3 }], ['Calmer le jeu', { m: 4, r: 1 }]] },
   { t: 'Un ancien de la maison vous prend sous son aile.', w: s => s.age < 22, c: [['Écouter ses conseils', { o: 3, m: 3 }], ['Suivre votre instinct', { r: 2, m: 2 }]] },
   { t: 'Un club du Golfe vous offre un salaire colossal.', w: s => s.age >= 28 && s.rep >= 60, c: [['Faire les valises', { $: 40, r: -3, m: 5 }], ['Rester pour la gloire', { r: 3, m: -2 }]] },
   { t: 'Examens de fin d\'année : le lycée ou le terrain ?', w: s => s.age < 19, c: [['Réviser sérieusement', { m: 5, o: -1 }], ['Tout miser sur le foot', { o: 2, m: -5 }]] },
-  { t: 'Derby à haute tension : la ville entière vous attend.', w: s => s.club >= 2, c: [['Prendre le match à votre compte', { r: 3, m: -4 }], ['Rester discipliné', { o: 1, m: 3 }]] },
-  { t: 'Finale de coupe en vue : la pression monte.', w: s => s.club >= 3, c: [['Visualiser la victoire', { o: 1, m: 6 }], ['S\'entraîner double', { o: 2, m: -8 }]] },
+  { t: 'Derby à haute tension : la ville entière vous attend.', w: s => CLUBS[s.club].l >= 70, c: [['Prendre le match à votre compte', { r: 3, m: -4 }], ['Rester discipliné', { o: 1, m: 3 }]] },
+  { t: 'Finale de coupe en vue : la pression monte.', w: s => CLUBS[s.club].l >= 78, c: [['Visualiser la victoire', { o: 1, m: 6 }], ['S\'entraîner double', { o: 2, m: -8 }]] },
   { t: 'Votre carrière avance : pensez-vous à l\'après ?', w: s => s.age >= 31, c: [['Passer le diplôme d\'entraîneur', { m: 5, o: -1 }], ['Tout donner jusqu\'au bout', { o: 1, m: -5 }]] },
   { t: 'Un journaliste critique votre dernière prestation.', w: s => s.rep >= 35, c: [['L\'ignorer', { m: 3 }], ['Lui répondre en conférence', { r: 2, m: -4 }]] },
   { t: 'Trêve estivale : comment passez-vous vos vacances ?', c: [['Repos total', { m: 10 }], ['Stage physique intensif', { o: 2, m: -5 }]] },
@@ -128,7 +143,7 @@ function newCareer(name, pos, origin) {
   const o = ORIGINES[origin];
   S = {
     name, pos, origin, age: 16, ovr: 50 + o.o, rep: 10, mor: 60, money: o.money,
-    club: 0, goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [0],
+    club: 0, v2: 1, goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [0],
     last: null, offer: null, peak: 50 + o.o
   };
   pickEvent(); save(); go('career');
@@ -156,7 +171,12 @@ function playSeason() {
   S.rep = clamp(S.rep + Math.round((perf - 70) / 6) + out.length * 3, 0, 100);
   S.money += Math.round(c.l / 6 * (1 + S.rep / 100));
   S.peak = Math.max(S.peak, S.ovr);
-  S.offer = (S.rep > (S.club + 1) * 14 && S.club < CLUBS.length - 1) ? S.club + 1 : null;
+
+  // Offre de transfert : un club plus fort (jusqu'à +10 de niveau), plafonné par la réputation
+  const cur = c.l;
+  const cand = CLUBS.map((x, i) => i).filter(i => CLUBS[i].l > cur && CLUBS[i].l <= Math.min(cur + 10, 55 + S.rep * 0.42));
+  S.offer = cand.length && Math.random() < 0.6 ? cand[rnd(0, cand.length - 1)] : null;
+
   S.last = { perf, g, out };
   S.phase = 'result';
   track('seasons'); track('goals', g); track('trophies', out.filter(o => !o.includes('Ballon')).length);
@@ -195,7 +215,7 @@ const bar = (label, v) => `<div class="stat">${label} : ${Math.round(v)}<div cla
 const statsCard = () => `
   <div class="card">
     <h2>${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
-    <p class="muted">${CLUBS[S.club].n} · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
+    <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
     ${bar('Niveau', S.ovr)}${bar('Réputation', S.rep)}${bar('Moral', S.mor)}
   </div>`;
 
@@ -233,7 +253,7 @@ const views = {
       <div class="big">${L.perf}</div><p class="muted">note de performance · ${L.g} buts</p>
       ${L.out.map(o => `<span class="tag">${o}</span>`).join('') || '<p class="muted">Pas de trophée cette saison.</p>'}
       <br><br>${S.offer !== null
-        ? `<p>📩 <b>${CLUBS[S.offer].n}</b> te propose un contrat !</p><div class="choices">
+        ? `<p>📩 <b>${CLUBS[S.offer].f} ${CLUBS[S.offer].n}</b> te propose un contrat !</p><div class="choices">
            <button onclick="transfer(true)">Accepter le transfert</button>
            <button onclick="transfer(false)">Rester à ${CLUBS[S.club].n}</button></div>`
         : `<button onclick="nextSeason()">Saison suivante</button>`}</div>`;
@@ -280,5 +300,13 @@ setTheme(localStorage.getItem('g11t') || 'golden');
 
 // Compatibilité avec les anciennes sauvegardes
 if (S) { S.seen = S.seen || []; S.visited = S.visited || [S.club]; }
+
+// Migration : l'ancienne liste de 7 clubs vers la nouvelle liste de 34
+if (S && !S.v2) {
+  const OLD = ['Académie de Saint-Brieuc', 'Stade Brestois', 'Olympique Lyonnais', 'AS Monaco', 'Arsenal', 'FC Barcelone', 'Real Madrid'];
+  const m = i => CLUBS.findIndex(c => c.n === OLD[i]);
+  S.club = m(S.club); S.visited = S.visited.map(m); S.offer = null; S.v2 = 1; save();
+}
+
 initQuests();
 render();
