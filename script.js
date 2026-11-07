@@ -1,7 +1,7 @@
 const app = document.querySelector('#app');
 const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || d); } catch (e) { return JSON.parse(d); } };
 
 let S = load('g11', 'null');   // carrière en cours
 let H = load('g11h', '[]');    // panthéon
@@ -133,8 +133,11 @@ function checkBadges() {
   localStorage.setItem('g11b', JSON.stringify(B));
 }
 
+// CORRIGÉ : ne plante plus quand tous les événements ont été vus récemment
 function pickEvent() {
-  const pool = EVENTS.map((e, i) => i).filter(i => (!EVENTS[i].w || EVENTS[i].w(S)) && !S.seen.slice(-6).includes(i));
+  const ok = EVENTS.map((e, i) => i).filter(i => !EVENTS[i].w || EVENTS[i].w(S));
+  let pool = ok.filter(i => !S.seen.slice(-3).includes(i));
+  if (!pool.length) pool = ok;
   S.ev = pool[rnd(0, pool.length - 1)];
   S.seen.push(S.ev);
 }
@@ -147,6 +150,12 @@ function newCareer(name, pos, origin) {
     last: null, offers: [], peak: 50 + o.o
   };
   pickEvent(); save(); go('career');
+}
+
+// Lit le formulaire sans dépendre des variables globales du navigateur
+function startCareer() {
+  const name = document.getElementById('nm').value.trim() || 'Joueur';
+  newCareer(name, document.getElementById('ps').value, document.getElementById('og').value);
 }
 
 function chooseEvent(i) {
@@ -236,7 +245,7 @@ const views = {
       <label>Nom</label><input id="nm" placeholder="Ton nom de joueur" maxlength="20">
       <label>Poste</label><select id="ps">${Object.entries(POSTES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <label>Origine</label><select id="og">${Object.keys(ORIGINES).map(k => `<option>${k}</option>`).join('')}</select>
-      <br><br><button onclick="newCareer(nm.value.trim() || 'Joueur', ps.value, og.value)">Signer mon premier contrat</button>
+      <br><br><button onclick="startCareer()">Signer mon premier contrat</button>
     </div>`,
 
   career: () => {
@@ -287,8 +296,16 @@ const views = {
     : '<div class="card muted">Les légendes que tu auras écrites apparaîtront ici.</div>')
 };
 
+// CORRIGÉ : affiche l'erreur au lieu d'une page blanche
 function render() {
-  app.innerHTML = views[view]();
+  try {
+    app.innerHTML = views[view]();
+  } catch (e) {
+    app.innerHTML = `<div class="card"><h2>Oups, une erreur est survenue</h2>
+      <p class="muted">${e.message}</p><br>
+      <button onclick="localStorage.removeItem('g11'); location.reload()">Réinitialiser ma carrière</button></div>`;
+    console.error(e);
+  }
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
 }
 function go(v) { view = v; render(); window.scrollTo(0, 0); }
@@ -310,6 +327,12 @@ if (S && !S.v2) {
   const m = i => CLUBS.findIndex(c => c.n === OLD[i]);
   S.club = m(S.club); S.visited = S.visited.map(m); S.offers = []; S.v2 = 1; save();
 }
+
+// Sécurité : répare une sauvegarde incohérente au lieu de planter
+if (S && (!CLUBS[S.club] || !Array.isArray(S.visited) || S.visited.some(i => !CLUBS[i]))) {
+  S.club = 0; S.visited = [0]; S.offers = []; save();
+}
+if (S && S.phase === 'event' && !EVENTS[S.ev]) { pickEvent(); save(); }
 
 initQuests();
 render();
