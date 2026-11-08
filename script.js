@@ -7,6 +7,7 @@ let S = load('g11', 'null');   // carrière en cours
 let H = load('g11h', '[]');    // panthéon
 let B = load('g11b', '{}');    // badges débloqués
 let Q = load('g11q', 'null');  // quêtes du jour
+let C = null;                  // création du joueur en cours
 let view = 'home';
 
 const save = () => localStorage.setItem('g11', JSON.stringify(S));
@@ -22,6 +23,7 @@ const CDIV = D.map(d => ({
 const CLUBS = CDIV.flatMap(d => d.names.map(n => ({ n, l: _lv[n], f: d.f, c: d.c }))).sort((a, b) => a.l - b.l);
 const memInit = () => Object.fromEntries(CDIV.map(d => [d.id, [...d.names]]));
 const divOf = n => CDIV.find(d => S.mem[d.id].includes(n)) || CDIV[0];
+const divInit = n => CDIV.find(d => d.names.includes(n)).n;
 
 let _eff = 0;   // niveau effectif de ton club cette saison
 const cLv = n => (S && CLUBS[S.club] && n === CLUBS[S.club].n) ? _eff : (_lv[n] ?? 55);
@@ -48,15 +50,106 @@ const cKO = a => {
   return w;
 };
 
+// ---------- Création du joueur : nationalité, origine, adolescence, entourage, rêve ----------
 const POSTES = { ATT: 'Attaquant', MIL: 'Milieu', DEF: 'Défenseur', GAR: 'Gardien' };
 const GOALS = { ATT: 0.5, MIL: 0.2, DEF: 0.06, GAR: 0 };
-const ORIGINES = {
-  'Quartier populaire': { o: 3, money: 0 },
-  'Famille aisée': { o: 0, money: 5 },
-  'Centre de formation': { o: 5, money: 1 }
-};
 
-// Événements : w = condition d'apparition ; effets : o niveau, r réputation, m moral, $ argent (M€)
+// c = code du pays si ses clubs sont dans le jeu ; fx : o niveau, r réputation, m moral, $ argent (M€)
+const NATS = [
+  { n: 'France', f: '🇫🇷', c: 'FR', d: 'Rigueur et formation', fx: { o: 1 } },
+  { n: 'Angleterre', f: '🇬🇧', c: 'EN', d: 'Intensité et mental', fx: { m: 3 } },
+  { n: 'Espagne', f: '🇪🇸', c: 'ES', d: 'Technique et jeu de passes', fx: { o: 1 } },
+  { n: 'Italie', f: '🇮🇹', c: 'IT', d: 'Sens tactique', fx: { m: 2, o: 1 } },
+  { n: 'Allemagne', f: '🇩🇪', c: 'DE', d: 'Discipline et efficacité', fx: { o: 1, m: 1 } },
+  { n: 'Portugal', f: '🇵🇹', c: 'PT', d: 'Talent et élégance', fx: { r: 2 } },
+  { n: 'Pays-Bas', f: '🇳🇱', c: null, d: 'École de football totale', fx: { o: 1 } },
+  { n: 'Belgique', f: '🇧🇪', c: null, d: 'Génération dorée', fx: { r: 1, o: 1 } },
+  { n: 'Brésil', f: '🇧🇷', c: null, d: 'Le football dans le sang', fx: { o: 2, m: -1 } },
+  { n: 'Argentine', f: '🇦🇷', c: null, d: 'Fierté et caractère', fx: { o: 1, m: 2 } },
+  { n: 'Maroc', f: '🇲🇦', c: null, d: 'Passion et ferveur', fx: { m: 3 } },
+  { n: 'Sénégal', f: '🇸🇳', c: null, d: 'Puissance et vitesse', fx: { o: 2 } },
+  { n: 'Côte d\'Ivoire', f: '🇨🇮', c: null, d: 'Explosivité', fx: { o: 2 } },
+  { n: 'Nigeria', f: '🇳🇬', c: null, d: 'Énergie et audace', fx: { o: 1, r: 1 } },
+  { n: 'Croatie', f: '🇭🇷', c: null, d: 'Mental de vainqueur', fx: { m: 3 } },
+  { n: 'Japon', f: '🇯🇵', c: null, d: 'Travail et précision', fx: { o: 1, m: 2 } }
+];
+const ORIGINES = [
+  { n: 'Quartier populaire', d: 'Tu as grandi en jouant dans la rue', fx: { o: 3 } },
+  { n: 'Famille aisée', d: 'Tout t\'a été facilité', fx: { $: 5 } },
+  { n: 'Centre de formation', d: 'Le foot dès le plus jeune âge', fx: { o: 4, $: 1 } },
+  { n: 'Petit village', d: 'Loin des projecteurs, près de la nature', fx: { m: 5, o: 1 } },
+  { n: 'Famille de footballeurs', d: 'Le foot dans le sang', fx: { o: 2, r: 3 } }
+];
+const TEENS = [
+  { n: 'Études sérieuses', d: 'Le bac d\'abord, le foot ensuite', fx: { m: 5, o: -1 } },
+  { n: 'Tout pour le foot', d: 'Entraînement matin et soir', fx: { o: 3, m: -4 } },
+  { n: 'Vie sociale', d: 'Amis, sorties et bonne humeur', fx: { m: 4, r: 2, o: -1 } },
+  { n: 'Petits boulots', d: 'Tu travailles pour aider ta famille', fx: { m: 2, $: 2 } },
+  { n: 'Académie à l\'étranger', d: 'Tu pars très jeune pour progresser', fx: { o: 3, r: 2, m: -3 } }
+];
+const CIRCLES = [
+  { n: 'Famille soudée', d: 'Un soutien de chaque instant', fx: { m: 8 } },
+  { n: 'Agent ambitieux', d: 'Il ouvre des portes, mais veut sa part', fx: { r: 5, $: 2, m: -2 } },
+  { n: 'Mentor ancien pro', d: 'Il t\'apprend les secrets du métier', fx: { o: 3, r: 1 } },
+  { n: 'Amis du quartier', d: 'Ils croient en toi depuis toujours', fx: { m: 4, r: 1 } },
+  { n: 'Seul contre tous', d: 'Tu ne comptes que sur toi', fx: { o: 2, m: -4 } }
+];
+const DREAMS = [
+  { n: 'Gagner le Ballon d\'Or', d: 'Être le meilleur joueur du monde', fx: { m: 3 }, f: s => s.bd >= 1 },
+  { n: 'Soulever la Ligue des champions', d: 'La plus belle des coupes', fx: { o: 1, m: 1 }, f: s => s.trophies.some(t => t.t === 'Ligue des champions') },
+  { n: 'Jouer dans un club mythique', d: 'Porter le maillot d\'un géant', fx: { r: 2 }, f: s => CLUBS[s.club].l >= 88 },
+  { n: 'Devenir millionnaire', d: 'Offrir une vie meilleure aux tiens', fx: { m: 2, $: 1 }, f: s => s.money >= 200 },
+  { n: 'Devenir une légende', d: 'Atteindre le sommet : 90 de niveau', fx: { m: 3 }, f: s => s.peak >= 90 }
+];
+const STEPS = [
+  { k: 'origin', t: 'Ton origine', q: 'D\'où viens-tu, avant les projecteurs du foot ?', o: ORIGINES },
+  { k: 'teen', t: 'Ton adolescence', q: 'Comment as-tu vécu ton adolescence ?', o: TEENS },
+  { k: 'circle', t: 'Ton entourage', q: 'Qui t\'entoure sur ta route ?', o: CIRCLES },
+  { k: 'dream', t: 'Ton rêve de gosse', q: 'Quel est ton plus grand rêve ?', o: DREAMS }
+];
+
+// Total des bonus de départ selon tous les choix
+function cBase() {
+  const t = { o: 0, r: 0, m: 0, $: 0 };
+  [NATS[C.nat], ...STEPS.map(s => s.o[C[s.k]])].forEach(x => { for (const k in t) t[k] += (x.fx[k] || 0); });
+  return t;
+}
+// Clubs qui ont repéré le joueur : 4 clubs adaptés à son niveau, ceux de son pays en priorité
+function cScout() {
+  const ovr = 50 + cBase().o, nc = NATS[C.nat].c;
+  let pool = CLUBS.map((c, i) => i).filter(i => CLUBS[i].l <= ovr + 10);
+  if (pool.length < 4) pool = CLUBS.map((c, i) => i).slice(0, 8);
+  pool.sort(() => Math.random() - 0.5);
+  C.clubs = [...pool.filter(i => CLUBS[i].c === nc).slice(0, 2), ...pool.filter(i => CLUBS[i].c !== nc)].slice(0, 4);
+}
+function cNext() {
+  C.name = document.getElementById('nm').value.trim() || 'Joueur';
+  C.nat = parseInt(document.getElementById('nt').value, 10);
+  C.pos = document.getElementById('ps').value;
+  C.step = 1; render();
+}
+function cPick(i) {
+  C[STEPS[C.step - 1].k] = i;
+  C.step++;
+  if (C.step === STEPS.length + 1) cScout();
+  render();
+}
+function cBack() { C.step = Math.max(0, C.step - 1); render(); }
+
+function newCareer(club) {
+  const b = cBase(), p = STEPS.map(s => s.o[C[s.k]].n), ovr = clamp(50 + b.o, 35, 70);
+  S = {
+    name: C.name, pos: C.pos, nat: C.nat, dream: C.dream, prof: p, origin: p[0],
+    age: 16, ovr, rep: clamp(10 + b.r, 0, 100), mor: clamp(60 + b.m, 0, 100), money: Math.max(0, b.$),
+    club, v5: 1, mem: memInit(), qual: null, rank: 0,
+    goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [club],
+    last: null, offers: [], peak: ovr
+  };
+  C = null; pickEvent(); save(); go('career');
+}
+
+// ---------- Événements ----------
+// w = condition d'apparition ; effets : o niveau, r réputation, m moral, $ argent (M€)
 const EVENTS = [
   { t: 'Un grand club vous observe lors d\'un match amical.', w: s => s.age < 22, c: [['Tout donner', { o: 2, r: 3, m: -5 }], ['Jouer collectif', { o: 1, r: 1, m: 5 }]] },
   { t: 'Blessure légère à l\'entraînement.', c: [['Se reposer', { m: 5 }], ['Reprendre vite', { o: 1, r: 2, m: -10 }]] },
@@ -93,7 +186,7 @@ const BADGES = [
   { id: 'o90', n: 'Élite mondiale', i: '💎', d: 'Atteindre 90 de niveau', f: s => s.ovr >= 90 },
   { id: 'tour', n: 'Globe-trotter', i: '🌍', d: 'Jouer dans 5 clubs', f: s => s.visited.length >= 5 },
   { id: 'rich', n: 'Millionnaire', i: '💰', d: 'Atteindre 200 M€', f: s => s.money >= 200 },
-  { id: 'ret', n: 'Fin de carrière', i: '🎖️', d: 'Aller jusqu\'à la retraite', f: s => s.phase === 'end' }
+  { id: 'ret', n: 'Fin de carrière', i: '🎖️', d: 'Prendre sa retraite', f: s => s.phase === 'end' }
 ];
 
 // Quêtes du jour : 3 parmi 8, tirées selon la date
@@ -147,6 +240,12 @@ function checkBadges() {
     }
   });
   localStorage.setItem('g11b', JSON.stringify(B));
+  // Rêve de gosse accompli
+  if (S.dream !== undefined && DREAMS[S.dream] && !S.dreamOk && DREAMS[S.dream].f(S)) {
+    S.dreamOk = 1; S.rep = clamp(S.rep + 10, 0, 100);
+    initQuests(); Q.tokens += 5; saveQ();
+    toast('✨ Rêve de gosse accompli : ' + DREAMS[S.dream].n + ' (+5 💎)');
+  }
 }
 
 function pickEvent() {
@@ -155,22 +254,6 @@ function pickEvent() {
   if (!pool.length) pool = ok;
   S.ev = pool[rnd(0, pool.length - 1)];
   S.seen.push(S.ev);
-}
-
-function newCareer(name, pos, origin, club) {
-  const o = ORIGINES[origin];
-  S = {
-    name, pos, origin, age: 16, ovr: 50 + o.o, rep: 10, mor: 60, money: o.money,
-    club, v4: 1, mem: memInit(), qual: null, rank: 0,
-    goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [club],
-    last: null, offers: [], peak: 50 + o.o
-  };
-  pickEvent(); save(); go('career');
-}
-
-function startCareer() {
-  const name = document.getElementById('nm').value.trim() || 'Joueur';
-  newCareer(name, document.getElementById('ps').value, document.getElementById('og').value, parseInt(document.getElementById('cb').value, 10));
 }
 
 function chooseEvent(i) {
@@ -278,13 +361,13 @@ function retire() {
   checkBadges(); save(); render();
 }
 
+// Plus aucune retraite forcée : le joueur s'arrête quand il le décide
 function nextSeason() {
   S.age++;
   if (S.age < 24) S.ovr += rnd(2, 5);
   else if (S.age <= 28) S.ovr += rnd(0, 2);
   else if (S.age >= 31) S.ovr -= rnd(1, 3);
   S.ovr = clamp(S.ovr, 30, 99);
-  if (S.age > 40) { retire(); return; }
   S.phase = 'event'; S.last = null; pickEvent();
   save(); render();
 }
@@ -293,34 +376,45 @@ const bar = (label, v) => `<div class="stat">${label} : ${Math.round(v)}<div cla
 
 const statsCard = () => `
   <div class="card">
-    <h2>${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
+    <h2>${S.nat !== undefined && NATS[S.nat] ? NATS[S.nat].f + ' ' : ''}${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
     <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} (${divOf(CLUBS[S.club].n).n}) · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
+    ${S.prof ? `<p class="muted" style="font-size:13px">${S.prof.slice(0, 3).join(' · ')}</p>` : ''}
+    ${S.dream !== undefined && DREAMS[S.dream] ? `<p style="font-size:13px;margin-top:4px">💭 ${DREAMS[S.dream].n} ${S.dreamOk ? '✅' : ''}</p>` : ''}
     ${bar('Niveau', S.ovr)}${bar('Réputation', S.rep)}${bar('Moral', S.mor)}
     ${S.phase !== 'end' && S.age >= 30 ? `<br><button class="ghost" onclick="if (confirm('Prendre ta retraite ?')) retire()">🏁 Prendre ma retraite</button>` : ''}
   </div>`;
 
 const views = {
-    home: () => `
-      <section class="hero">
-        <h1>Écris ta <span>légende</span></h1>
-        <p>De 16 ans à la retraite, chaque choix compte. Transferts, titres, Ballon d'Or : personne ne connaît son destin.</p>
-        <button onclick="go('${S && S.phase !== 'end' ? 'career' : 'create'}')">${S && S.phase !== 'end' ? '▶ Continuer ma carrière' : '⚽ Commencer ma carrière'}</button>
-      </section>
-      <div class="feats">
-        <div class="feat" onclick="go('career')" style="animation-delay:.05s"><div class="ic">⚽</div><b>Carrière</b><span>Du centre de formation au Ballon d'Or</span></div>
-        <div class="feat" onclick="go('manager')" style="animation-delay:.15s"><div class="ic">📋</div><b>Manager</b><span>Dirige un club, ses transferts et sa tactique</span></div>
-        <div class="feat" onclick="go('quests')" style="animation-delay:.25s"><div class="ic">🎯</div><b>Quêtes</b><span>De nouveaux défis chaque jour</span></div>
-      </div>`,
-
-  create: () => `
-    <div class="card">
-      <h2>Crée ton joueur</h2>
-      <label>Nom</label><input id="nm" placeholder="Ton nom de joueur" maxlength="20">
-      <label>Poste</label><select id="ps">${Object.entries(POSTES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
-      <label>Origine</label><select id="og">${Object.keys(ORIGINES).map(k => `<option>${k}</option>`).join('')}</select>
-      <label>Club formateur</label><select id="cb">${CLUBS.map((c, i) => c.l <= 62 ? `<option value="${i}">${c.f} ${c.n}</option>` : '').join('')}</select>
-      <br><br><button onclick="startCareer()">Signer mon premier contrat</button>
+  home: () => `
+    <section class="hero">
+      <h1>Écris ta <span>légende</span></h1>
+      <p>De 16 ans à la retraite, chaque choix compte. Transferts, titres, Ballon d'Or : personne ne connaît son destin.</p>
+      <button onclick="go('${S && S.phase !== 'end' ? 'career' : 'create'}')">${S && S.phase !== 'end' ? '▶ Continuer ma carrière' : '⚽ Commencer ma carrière'}</button>
+    </section>
+    <div class="feats">
+      <div class="feat" onclick="go('career')" style="animation-delay:.05s"><div class="ic">⚽</div><b>Carrière</b><span>Du centre de formation au Ballon d'Or</span></div>
+      <div class="feat" onclick="go('manager')" style="animation-delay:.15s"><div class="ic">📋</div><b>Manager</b><span>Dirige un club, ses transferts et sa tactique</span></div>
+      <div class="feat" onclick="go('quests')" style="animation-delay:.25s"><div class="ic">🎯</div><b>Quêtes</b><span>De nouveaux défis chaque jour</span></div>
     </div>`,
+
+  create: () => {
+    if (!C) C = { step: 0 };
+    const prog = `<div class="bar" style="margin-bottom:18px"><i style="width:${(C.step + 1) / 6 * 100}%"></i></div>`;
+    if (C.step === 0) return `<div class="card">${prog}<h2>Crée ton joueur</h2><p class="muted">Étape 1/6</p>
+      <label>Nom</label><input id="nm" placeholder="Ton nom de joueur" maxlength="20" value="${C.name || ''}">
+      <label>Nationalité</label><select id="nt">${NATS.map((n, i) => `<option value="${i}" ${i === C.nat ? 'selected' : ''}>${n.f} ${n.n}</option>`).join('')}</select>
+      <label>Poste</label><select id="ps">${Object.entries(POSTES).map(([k, v]) => `<option value="${k}" ${k === C.pos ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <br><br><button onclick="cNext()">Suivant →</button></div>`;
+    if (C.step <= STEPS.length) {
+      const st = STEPS[C.step - 1];
+      return `<div class="card">${prog}<h2>${st.t}</h2><p class="muted">Étape ${C.step + 1}/6 · ${st.q}</p>
+        <div class="choices">${st.o.map((o, i) => `<button onclick="cPick(${i})"><b>${o.n}</b><br><small>${o.d}</small></button>`).join('')}</div>
+        <br><button class="ghost" onclick="cBack()">← Retour</button></div>`;
+    }
+    return `<div class="card">${prog}<h2>Ils t'ont repéré !</h2><p class="muted">Étape 6/6 · Quel club vas-tu rejoindre ?</p>
+      <div class="choices">${C.clubs.map(i => `<button onclick="newCareer(${i})">${CLUBS[i].f} <b>${CLUBS[i].n}</b><br><small>${divInit(CLUBS[i].n)} · niveau ${CLUBS[i].l}</small></button>`).join('')}</div>
+      <br><button class="ghost" onclick="cBack()">← Retour</button></div>`;
+  },
 
   career: () => {
     if (!S) return views.create();
@@ -328,7 +422,7 @@ const views = {
       <div class="card"><h2>Retraite</h2>
       <p>Pic de niveau : <b>${S.peak}</b> · ${S.trophies.length} trophées · ${S.bd} Ballon(s) d'Or.</p>
       <p class="muted">Ta légende est entrée au Panthéon.</p><br>
-      <button onclick="go('create')">Rejouer une carrière</button></div>`;
+      <button onclick="C = null; go('create')">Rejouer une carrière</button></div>`;
     if (S.phase === 'event') {
       const e = EVENTS[S.ev];
       return statsCard() + `<div class="card"><h2>Saison ${S.age - 15}</h2><p>${e.t}</p>
@@ -403,15 +497,15 @@ setTheme(localStorage.getItem('g11t') || 'golden');
 if (S) { S.seen = S.seen || []; S.offers = S.offers || []; }
 
 // Migration : ancienne liste de clubs fictifs -> vrai club de niveau le plus proche
-if (S && !S.v3 && !S.v4) {
+if (S && !S.v3 && !S.v4 && !S.v5) {
   const oldLevel = i => i < 3 ? [55, 58, 60][i] : 59 + i;
   const nearest = l => CLUBS.reduce((b, c, i) => Math.abs(c.l - l) < Math.abs(CLUBS[b].l - l) ? i : b, 0);
   const old = Array.isArray(S.visited) ? S.visited : [S.club];
   S.visited = [...new Set(old.map(i => nearest(oldLevel(i))))];
   S.club = nearest(oldLevel(S.club)); S.offers = [];
 }
-// Migration : ajout des divisions dynamiques (montées / descentes)
-if (S && !S.v4) { S.mem = memInit(); S.qual = null; S.rank = 0; S.v4 = 1; save(); }
+// Migration : divisions dynamiques (montées / descentes)
+if (S && !S.v4 && !S.v5) { S.mem = memInit(); S.qual = null; S.rank = 0; S.v4 = 1; save(); }
 
 // Sécurité : répare une sauvegarde incohérente au lieu de planter
 if (S && (!CLUBS[S.club] || !Array.isArray(S.visited) || S.visited.some(i => !CLUBS[i]) || !S.mem)) {
