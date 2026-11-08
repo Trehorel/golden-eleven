@@ -300,12 +300,17 @@ const statsCard = () => `
   </div>`;
 
 const views = {
-  home: () => `
-    <section class="hero">
-      <h1>Écris ta <span>légende</span></h1>
-      <p>De 16 ans à la retraite, chaque choix compte. Transferts, titres, Ballon d'Or : personne ne connaît son destin.</p>
-      <button onclick="go('${S && S.phase !== 'end' ? 'career' : 'create'}')">${S && S.phase !== 'end' ? 'Continuer ma carrière' : 'Commencer ma carrière'}</button>
-    </section>`,
+    home: () => `
+      <section class="hero">
+        <h1>Écris ta <span>légende</span></h1>
+        <p>De 16 ans à la retraite, chaque choix compte. Transferts, titres, Ballon d'Or : personne ne connaît son destin.</p>
+        <button onclick="go('${S && S.phase !== 'end' ? 'career' : 'create'}')">${S && S.phase !== 'end' ? '▶ Continuer ma carrière' : '⚽ Commencer ma carrière'}</button>
+      </section>
+      <div class="feats">
+        <div class="feat" onclick="go('career')" style="animation-delay:.05s"><div class="ic">⚽</div><b>Carrière</b><span>Du centre de formation au Ballon d'Or</span></div>
+        <div class="feat" onclick="go('manager')" style="animation-delay:.15s"><div class="ic">📋</div><b>Manager</b><span>Dirige un club, ses transferts et sa tactique</span></div>
+        <div class="feat" onclick="go('quests')" style="animation-delay:.25s"><div class="ic">🎯</div><b>Quêtes</b><span>De nouveaux défis chaque jour</span></div>
+      </div>`,
 
   create: () => `
     <div class="card">
