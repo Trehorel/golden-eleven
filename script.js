@@ -50,29 +50,36 @@ const cKO = a => {
   return w;
 };
 
-// ---------- Création du joueur : nationalité, origine, adolescence, entourage, rêve ----------
+// ---------- Nations : 65 pays, 5 continents ----------
 const POSTES = { ATT: 'Attaquant', MIL: 'Milieu', DEF: 'Défenseur', GAR: 'Gardien' };
 const GOALS = { ATT: 0.5, MIL: 0.2, DEF: 0.06, GAR: 0 };
 
-// c = code du pays si ses clubs sont dans le jeu ; fx : o niveau, r réputation, m moral, $ argent (M€)
+const CONT = { EU: 'Europe', AF: 'Afrique', SA: 'Amérique du Sud', NA: 'Amérique du Nord', AS: 'Asie' };
+// Compétition de sélections propre à chaque continent
+const NCOMP = { EU: 'Championnat d\'Europe', AF: 'Coupe d\'Afrique des nations', SA: 'Copa América', NA: 'Gold Cup', AS: 'Coupe d\'Asie' };
+// nom | drapeau | code du championnat jouable (si ses clubs sont dans le jeu) | continent | force de la sélection
 const NATS = [
-  { n: 'France', f: '🇫🇷', c: 'FR', d: 'Rigueur et formation', fx: { o: 1 } },
-  { n: 'Angleterre', f: '🇬🇧', c: 'EN', d: 'Intensité et mental', fx: { m: 3 } },
-  { n: 'Espagne', f: '🇪🇸', c: 'ES', d: 'Technique et jeu de passes', fx: { o: 1 } },
-  { n: 'Italie', f: '🇮🇹', c: 'IT', d: 'Sens tactique', fx: { m: 2, o: 1 } },
-  { n: 'Allemagne', f: '🇩🇪', c: 'DE', d: 'Discipline et efficacité', fx: { o: 1, m: 1 } },
-  { n: 'Portugal', f: '🇵🇹', c: 'PT', d: 'Talent et élégance', fx: { r: 2 } },
-  { n: 'Pays-Bas', f: '🇳🇱', c: null, d: 'École de football totale', fx: { o: 1 } },
-  { n: 'Belgique', f: '🇧🇪', c: null, d: 'Génération dorée', fx: { r: 1, o: 1 } },
-  { n: 'Brésil', f: '🇧🇷', c: null, d: 'Le football dans le sang', fx: { o: 2, m: -1 } },
-  { n: 'Argentine', f: '🇦🇷', c: null, d: 'Fierté et caractère', fx: { o: 1, m: 2 } },
-  { n: 'Maroc', f: '🇲🇦', c: null, d: 'Passion et ferveur', fx: { m: 3 } },
-  { n: 'Sénégal', f: '🇸🇳', c: null, d: 'Puissance et vitesse', fx: { o: 2 } },
-  { n: 'Côte d\'Ivoire', f: '🇨🇮', c: null, d: 'Explosivité', fx: { o: 2 } },
-  { n: 'Nigeria', f: '🇳🇬', c: null, d: 'Énergie et audace', fx: { o: 1, r: 1 } },
-  { n: 'Croatie', f: '🇭🇷', c: null, d: 'Mental de vainqueur', fx: { m: 3 } },
-  { n: 'Japon', f: '🇯🇵', c: null, d: 'Travail et précision', fx: { o: 1, m: 2 } }
-];
+  "France|🇫🇷|FR|EU|88", "Angleterre|🇬🇧|EN|EU|88", "Espagne|🇪🇸|ES|EU|89", "Italie|🇮🇹|IT|EU|82", "Allemagne|🇩🇪|DE|EU|85",
+  "Portugal|🇵🇹|PT|EU|86", "Pays-Bas|🇳🇱||EU|84", "Belgique|🇧🇪||EU|80", "Croatie|🇭🇷||EU|79", "Suisse|🇨🇭||EU|74",
+  "Danemark|🇩🇰||EU|75", "Autriche|🇦🇹||EU|74", "Turquie|🇹🇷||EU|74", "Norvège|🇳🇴||EU|72", "Ukraine|🇺🇦||EU|71",
+  "Pologne|🇵🇱||EU|70", "Serbie|🇷🇸||EU|70", "Suède|🇸🇪||EU|70", "Écosse|🏴󠁧󠁢󠁳󠁣󠁴󠁿||EU|68", "Tchéquie|🇨🇿||EU|68",
+  "Hongrie|🇭🇺||EU|66", "Grèce|🇬🇷||EU|64", "Roumanie|🇷🇴||EU|64", "Irlande|🇮🇪||EU|60",
+  "Maroc|🇲🇦||AF|80", "Sénégal|🇸🇳||AF|77", "Côte d'Ivoire|🇨🇮||AF|74", "Nigeria|🇳🇬||AF|72", "Égypte|🇪🇬||AF|72",
+  "Algérie|🇩🇿||AF|72", "Cameroun|🇨🇲||AF|68", "Tunisie|🇹🇳||AF|66", "Ghana|🇬🇭||AF|66", "Mali|🇲🇱||AF|64",
+  "RD Congo|🇨🇩||AF|62", "Afrique du Sud|🇿🇦||AF|60", "Burkina Faso|🇧🇫||AF|58", "Cap-Vert|🇨🇻||AF|56",
+  "Argentine|🇦🇷||SA|90", "Brésil|🇧🇷||SA|88", "Uruguay|🇺🇾||SA|80", "Colombie|🇨🇴||SA|79", "Équateur|🇪🇨||SA|70",
+  "Paraguay|🇵🇾||SA|64", "Chili|🇨🇱||SA|64", "Pérou|🇵🇪||SA|60", "Venezuela|🇻🇪||SA|58", "Bolivie|🇧🇴||SA|52",
+  "États-Unis|🇺🇸||NA|74", "Mexique|🇲🇽||NA|74", "Canada|🇨🇦||NA|68", "Costa Rica|🇨🇷||NA|60", "Panama|🇵🇦||NA|58",
+  "Jamaïque|🇯🇲||NA|56", "Haïti|🇭🇹||NA|50",
+  "Japon|🇯🇵||AS|78", "Corée du Sud|🇰🇷||AS|74", "Iran|🇮🇷||AS|70", "Australie|🇦🇺||AS|66", "Arabie saoudite|🇸🇦||AS|62",
+  "Jordanie|🇯🇴||AS|56", "Qatar|🇶🇦||AS|58", "Ouzbékistan|🇺🇿||AS|58", "Irak|🇮🇶||AS|54", "Chine|🇨🇳||AS|50"
+].map(s => {
+  const [n, f, c, k, l] = s.split('|');
+  return { n, f, c, k, l: +l, fx: { o: +l >= 80 ? 1 : 0, m: +l < 70 ? 2 : 0, r: +l >= 85 ? 1 : 0 } };
+});
+const NAT = () => NATS.find(n => n.n === S.natn);
+
+// ---------- Création du joueur : nationalité, origine, adolescence, entourage, rêve ----------
 const ORIGINES = [
   { n: 'Quartier populaire', d: 'Tu as grandi en jouant dans la rue', fx: { o: 3 } },
   { n: 'Famille aisée', d: 'Tout t\'a été facilité', fx: { $: 5 } },
@@ -96,7 +103,8 @@ const CIRCLES = [
 ];
 const DREAMS = [
   { n: 'Gagner le Ballon d\'Or', d: 'Être le meilleur joueur du monde', fx: { m: 3 }, f: s => s.bd >= 1 },
-  { n: 'Soulever la Ligue des champions', d: 'La plus belle des coupes', fx: { o: 1, m: 1 }, f: s => s.trophies.some(t => t.t === 'Ligue des champions') },
+  { n: 'Soulever la Ligue des champions', d: 'La plus belle des coupes de clubs', fx: { o: 1, m: 1 }, f: s => s.trophies.some(t => t.t === 'Ligue des champions') },
+  { n: 'Soulever la Coupe du monde', d: 'Le rêve de tout un pays', fx: { m: 3, r: 1 }, f: s => s.trophies.some(t => t.t === 'Coupe du monde') },
   { n: 'Jouer dans un club mythique', d: 'Porter le maillot d\'un géant', fx: { r: 2 }, f: s => CLUBS[s.club].l >= 88 },
   { n: 'Devenir millionnaire', d: 'Offrir une vie meilleure aux tiens', fx: { m: 2, $: 1 }, f: s => s.money >= 200 },
   { n: 'Devenir une légende', d: 'Atteindre le sommet : 90 de niveau', fx: { m: 3 }, f: s => s.peak >= 90 }
@@ -120,7 +128,7 @@ function cScout() {
   let pool = CLUBS.map((c, i) => i).filter(i => CLUBS[i].l <= ovr + 10);
   if (pool.length < 4) pool = CLUBS.map((c, i) => i).slice(0, 8);
   pool.sort(() => Math.random() - 0.5);
-  C.clubs = [...pool.filter(i => CLUBS[i].c === nc).slice(0, 2), ...pool.filter(i => CLUBS[i].c !== nc)].slice(0, 4);
+  C.clubs = [...pool.filter(i => nc && CLUBS[i].c === nc).slice(0, 2), ...pool.filter(i => !nc || CLUBS[i].c !== nc)].slice(0, 4);
 }
 function cNext() {
   C.name = document.getElementById('nm').value.trim() || 'Joueur';
@@ -139,13 +147,53 @@ function cBack() { C.step = Math.max(0, C.step - 1); render(); }
 function newCareer(club) {
   const b = cBase(), p = STEPS.map(s => s.o[C[s.k]].n), ovr = clamp(50 + b.o, 35, 70);
   S = {
-    name: C.name, pos: C.pos, nat: C.nat, dream: C.dream, prof: p, origin: p[0],
+    name: C.name, pos: C.pos, natn: NATS[C.nat].n, dream: C.dream, prof: p, origin: p[0],
     age: 16, ovr, rep: clamp(10 + b.r, 0, 100), mor: clamp(60 + b.m, 0, 100), money: Math.max(0, b.$),
     club, v5: 1, mem: memInit(), qual: null, rank: 0,
     goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [club],
     last: null, offers: [], peak: ovr
   };
   C = null; pickEvent(); save(); go('career');
+}
+
+// ---------- Équipe nationale ----------
+// Coupe du monde tous les 4 ans (18, 22, 26...), compétition continentale 2 ans plus tard (20, 24, 28...)
+function natTour(kind) {
+  const nat = NAT();
+  if (!nat) return null;
+  const name = kind === 'WC' ? 'Coupe du monde' : NCOMP[nat.k];
+  if (S.ovr + rnd(-5, 5) + S.rep / 10 < nat.l - 22) return `🌍 Non retenu en sélection pour la ${name}`;
+  const pool = kind === 'WC' ? NATS : NATS.filter(n => n.k === nat.k);
+  const field = pool.map(n => ({ n, s: n.l + rnd(-10, 10) })).sort((a, b) => b.s - a.s).slice(0, kind === 'WC' ? 32 : 16).map(x => x.n);
+  if (!field.includes(nat)) return `🌍 ${nat.f} ${nat.n} non qualifiée pour la ${name}`;
+
+  const tl = nat.l + clamp((S.ovr - nat.l) / 6, -3, 6);   // ton niveau renforce ta sélection
+  const stages = kind === 'WC' ? ['la phase de groupes', 'les 8es de finale', 'les quarts de finale', 'les demi-finales', 'la finale']
+    : ['la phase de groupes', 'les quarts de finale', 'les demi-finales', 'la finale'];
+  const others = field.filter(n => n !== nat);
+  const gain = k => { S.rep = clamp(S.rep + k, 0, 100); };
+
+  // Phase de groupes : 3 matchs
+  let pts = 0;
+  for (let i = 0; i < 3; i++) {
+    const o = others[rnd(0, others.length - 1)], [x, y] = cSim(tl, o.l + rnd(-4, 4));
+    pts += x > y ? 3 : x === y ? 1 : 0;
+  }
+  if (pts < 4) { gain(1); return `🌍 ${name} : éliminé dès ${stages[0]}`; }
+
+  // Phases finales : adversaires de plus en plus forts
+  for (let k = 1; k < stages.length; k++) {
+    let o = 0;
+    for (let j = 0; j <= k; j++) o = Math.max(o, others[rnd(0, others.length - 1)].l);
+    const [x, y] = cSim(tl, o + rnd(-4, 4));
+    if (!(x > y || (x === y && Math.random() < 0.5))) {
+      gain(k + 1);
+      return k === stages.length - 1 ? `🥈 ${name} : finaliste avec ${nat.n}` : `🌍 ${name} : éliminé en ${stages[k].replace(/^(les|la) /, '')}`;
+    }
+  }
+  gain(10);
+  S.trophies.push({ age: S.age, t: name, c: nat.n });
+  return `🏆 ${nat.f} ${nat.n} championne : ${name} !`;
 }
 
 // ---------- Événements ----------
@@ -180,11 +228,13 @@ const BADGES = [
   { id: 't1', n: 'Premier titre', i: '🏆', d: 'Remporter un trophée', f: s => s.trophies.length >= 1 },
   { id: 't5', n: 'Collectionneur', i: '🗄️', d: '5 trophées en une carrière', f: s => s.trophies.length >= 5 },
   { id: 'eu', n: 'Le Graal', i: '⭐', d: 'Gagner une coupe d\'Europe', f: s => s.trophies.some(t => t.t === 'Ligue des champions' || t.t === 'Ligue Europa') },
+  { id: 'wc', n: 'Champion du monde', i: '🌍', d: 'Gagner la Coupe du monde', f: s => s.trophies.some(t => t.t === 'Coupe du monde') },
+  { id: 'ct', n: 'Roi du continent', i: '🌟', d: 'Gagner une compétition continentale', f: s => s.trophies.some(t => Object.values(NCOMP).includes(t.t)) },
   { id: 'bd', n: 'Joueur d\'Or', i: '🥇', d: 'Gagner le Ballon d\'Or', f: s => s.bd >= 1 },
   { id: 'bd3', n: 'Immortel', i: '👑', d: '3 Ballons d\'Or', f: s => s.bd >= 3 },
   { id: 'g100', n: 'Centurion', i: '⚽', d: '100 buts en carrière', f: s => s.goals >= 100 },
   { id: 'o90', n: 'Élite mondiale', i: '💎', d: 'Atteindre 90 de niveau', f: s => s.ovr >= 90 },
-  { id: 'tour', n: 'Globe-trotter', i: '🌍', d: 'Jouer dans 5 clubs', f: s => s.visited.length >= 5 },
+  { id: 'tour', n: 'Globe-trotter', i: '🧳', d: 'Jouer dans 5 clubs', f: s => s.visited.length >= 5 },
   { id: 'rich', n: 'Millionnaire', i: '💰', d: 'Atteindre 200 M€', f: s => s.money >= 200 },
   { id: 'ret', n: 'Fin de carrière', i: '🎖️', d: 'Prendre sa retraite', f: s => s.phase === 'end' }
 ];
@@ -300,6 +350,12 @@ function playSeason() {
     else out.push(`🌍 ${tag} : ${gap > -4 ? 'finaliste' : gap > -9 ? 'demi-finale' : gap > -15 ? 'quart de finale' : gap > -22 ? '8e de finale' : 'phase de ligue'}`);
   }
 
+  // 3b. Équipe nationale : Coupe du monde (18, 22, 26 ans...) et compétition continentale (20, 24, 28 ans...)
+  if (S.age >= 18 && S.age % 2 === 0) {
+    const r = natTour(S.age % 4 === 2 ? 'WC' : 'CONT');
+    if (r) out.push(r);
+  }
+
   // 4. Ballon d'Or
   if (perf >= 92 && S.rep >= 60 && Math.random() < 0.6) { S.bd++; S.trophies.push({ age: S.age, t: 'Ballon d\'Or', c: me }); out.push('🥇 Ballon d\'Or !'); }
 
@@ -361,7 +417,7 @@ function retire() {
   checkBadges(); save(); render();
 }
 
-// Plus aucune retraite forcée : le joueur s'arrête quand il le décide
+// Aucune retraite forcée : le joueur s'arrête quand il le décide
 function nextSeason() {
   S.age++;
   if (S.age < 24) S.ovr += rnd(2, 5);
@@ -374,15 +430,18 @@ function nextSeason() {
 
 const bar = (label, v) => `<div class="stat">${label} : ${Math.round(v)}<div class="bar"><i style="width:${v}%"></i></div></div>`;
 
-const statsCard = () => `
+const statsCard = () => {
+  const nat = NAT();
+  return `
   <div class="card">
-    <h2>${S.nat !== undefined && NATS[S.nat] ? NATS[S.nat].f + ' ' : ''}${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
+    <h2>${nat ? nat.f + ' ' : ''}${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
     <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} (${divOf(CLUBS[S.club].n).n}) · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
-    ${S.prof ? `<p class="muted" style="font-size:13px">${S.prof.slice(0, 3).join(' · ')}</p>` : ''}
+    ${nat ? `<p class="muted" style="font-size:13px">${nat.n} · ${CONT[nat.k]}${S.prof ? ' · ' + S.prof.slice(0, 3).join(' · ') : ''}</p>` : ''}
     ${S.dream !== undefined && DREAMS[S.dream] ? `<p style="font-size:13px;margin-top:4px">💭 ${DREAMS[S.dream].n} ${S.dreamOk ? '✅' : ''}</p>` : ''}
     ${bar('Niveau', S.ovr)}${bar('Réputation', S.rep)}${bar('Moral', S.mor)}
     ${S.phase !== 'end' && S.age >= 30 ? `<br><button class="ghost" onclick="if (confirm('Prendre ta retraite ?')) retire()">🏁 Prendre ma retraite</button>` : ''}
   </div>`;
+};
 
 const views = {
   home: () => `
@@ -402,7 +461,7 @@ const views = {
     const prog = `<div class="bar" style="margin-bottom:18px"><i style="width:${(C.step + 1) / 6 * 100}%"></i></div>`;
     if (C.step === 0) return `<div class="card">${prog}<h2>Crée ton joueur</h2><p class="muted">Étape 1/6</p>
       <label>Nom</label><input id="nm" placeholder="Ton nom de joueur" maxlength="20" value="${C.name || ''}">
-      <label>Nationalité</label><select id="nt">${NATS.map((n, i) => `<option value="${i}" ${i === C.nat ? 'selected' : ''}>${n.f} ${n.n}</option>`).join('')}</select>
+      <label>Nationalité</label><select id="nt">${Object.entries(CONT).map(([k, v]) => `<optgroup label="${v}">${NATS.map((n, i) => n.k === k ? `<option value="${i}" ${i === C.nat ? 'selected' : ''}>${n.f} ${n.n}</option>` : '').join('')}</optgroup>`).join('')}</select>
       <label>Poste</label><select id="ps">${Object.entries(POSTES).map(([k, v]) => `<option value="${k}" ${k === C.pos ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <br><br><button onclick="cNext()">Suivant →</button></div>`;
     if (C.step <= STEPS.length) {
@@ -506,6 +565,11 @@ if (S && !S.v3 && !S.v4 && !S.v5) {
 }
 // Migration : divisions dynamiques (montées / descentes)
 if (S && !S.v4 && !S.v5) { S.mem = memInit(); S.qual = null; S.rank = 0; S.v4 = 1; save(); }
+// Migration : l'ancienne nationalité (numéro) devient un nom de pays
+if (S && S.nat !== undefined && !S.natn) {
+  const OLDN = ['France', 'Angleterre', 'Espagne', 'Italie', 'Allemagne', 'Portugal', 'Pays-Bas', 'Belgique', 'Brésil', 'Argentine', 'Maroc', 'Sénégal', 'Côte d\'Ivoire', 'Nigeria', 'Croatie', 'Japon'];
+  S.natn = OLDN[S.nat] || 'France'; save();
+}
 
 // Sécurité : répare une sauvegarde incohérente au lieu de planter
 if (S && (!CLUBS[S.club] || !Array.isArray(S.visited) || S.visited.some(i => !CLUBS[i]) || !S.mem)) {
