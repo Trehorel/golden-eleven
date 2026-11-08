@@ -12,26 +12,13 @@ let view = 'home';
 const save = () => localStorage.setItem('g11', JSON.stringify(S));
 const saveQ = () => localStorage.setItem('g11q', JSON.stringify(Q));
 
-const CLUBS = [
-  { n: 'Académie de Saint-Brieuc', l: 55, f: '🇫🇷' }, { n: 'Angers SCO', l: 58, f: '🇫🇷' },
-  { n: 'FC Lorient', l: 60, f: '🇫🇷' }, { n: 'Southampton', l: 62, f: '🇬🇧' },
-  { n: 'Getafe', l: 63, f: '🇪🇸' }, { n: 'Genoa', l: 64, f: '🇮🇹' },
-  { n: 'Stade Brestois', l: 65, f: '🇫🇷' }, { n: 'Stade Rennais', l: 66, f: '🇫🇷' },
-  { n: 'Werder Brême', l: 67, f: '🇩🇪' }, { n: 'Villarreal', l: 68, f: '🇪🇸' },
-  { n: 'Feyenoord', l: 69, f: '🇳🇱' }, { n: 'OGC Nice', l: 70, f: '🇫🇷' },
-  { n: 'Benfica', l: 71, f: '🇵🇹' }, { n: 'Atalanta', l: 72, f: '🇮🇹' },
-  { n: 'LOSC Lille', l: 73, f: '🇫🇷' }, { n: 'Olympique Lyonnais', l: 74, f: '🇫🇷' },
-  { n: 'Ajax', l: 75, f: '🇳🇱' }, { n: 'Olympique de Marseille', l: 76, f: '🇫🇷' },
-  { n: 'FC Porto', l: 77, f: '🇵🇹' }, { n: 'AS Monaco', l: 78, f: '🇫🇷' },
-  { n: 'AC Milan', l: 79, f: '🇮🇹' }, { n: 'Tottenham', l: 80, f: '🇬🇧' },
-  { n: 'Borussia Dortmund', l: 81, f: '🇩🇪' }, { n: 'Juventus', l: 82, f: '🇮🇹' },
-  { n: 'Atlético de Madrid', l: 83, f: '🇪🇸' }, { n: 'Arsenal', l: 84, f: '🇬🇧' },
-  { n: 'Inter Milan', l: 85, f: '🇮🇹' }, { n: 'Bayern Munich', l: 86, f: '🇩🇪' },
-  { n: 'Chelsea', l: 87, f: '🇬🇧' }, { n: 'Manchester United', l: 88, f: '🇬🇧' },
-  { n: 'FC Barcelone', l: 89, f: '🇪🇸' }, { n: 'Paris Saint-Germain', l: 90, f: '🇫🇷' },
-  { n: 'Liverpool', l: 91, f: '🇬🇧' }, { n: 'Real Madrid', l: 92, f: '🇪🇸' },
-  { n: 'Manchester City', l: 93, f: '🇬🇧' }
-];
+// Clubs réels (données de ligues.js), triés par niveau ; dm = niveau du meilleur club de la division
+const _seen = new Set();
+const CLUBS = D.flatMap(d => {
+  const dm = Math.max(...d.cl.map(c => c.l));
+  return d.cl.filter(c => !_seen.has(c.n) && _seen.add(c.n)).map(c => ({ n: c.n, l: c.l, f: d.f, dn: d.n, t: d.t, c: d.c, dm }));
+}).sort((a, b) => a.l - b.l);
+
 const POSTES = { ATT: 'Attaquant', MIL: 'Milieu', DEF: 'Défenseur', GAR: 'Gardien' };
 const GOALS = { ATT: 0.5, MIL: 0.2, DEF: 0.06, GAR: 0 };
 const ORIGINES = {
@@ -70,7 +57,7 @@ const EVENTS = [
 const BADGES = [
   { id: 't1', n: 'Premier titre', i: '🏆', d: 'Remporter un trophée', f: s => s.trophies.length >= 1 },
   { id: 't5', n: 'Collectionneur', i: '🗄️', d: '5 trophées en une carrière', f: s => s.trophies.length >= 5 },
-  { id: 'eu', n: 'Le Graal', i: '⭐', d: 'Gagner la Coupe d\'Europe', f: s => s.trophies.some(t => t.t === 'Coupe d\'Europe') },
+  { id: 'eu', n: 'Le Graal', i: '⭐', d: 'Gagner une coupe d\'Europe', f: s => s.trophies.some(t => t.t === 'Ligue des champions' || t.t === 'Ligue Europa') },
   { id: 'bd', n: 'Joueur d\'Or', i: '🥇', d: 'Gagner le Ballon d\'Or', f: s => s.bd >= 1 },
   { id: 'bd3', n: 'Immortel', i: '👑', d: '3 Ballons d\'Or', f: s => s.bd >= 3 },
   { id: 'g100', n: 'Centurion', i: '⚽', d: '100 buts en carrière', f: s => s.goals >= 100 },
@@ -133,7 +120,6 @@ function checkBadges() {
   localStorage.setItem('g11b', JSON.stringify(B));
 }
 
-// CORRIGÉ : ne plante plus quand tous les événements ont été vus récemment
 function pickEvent() {
   const ok = EVENTS.map((e, i) => i).filter(i => !EVENTS[i].w || EVENTS[i].w(S));
   let pool = ok.filter(i => !S.seen.slice(-3).includes(i));
@@ -142,20 +128,19 @@ function pickEvent() {
   S.seen.push(S.ev);
 }
 
-function newCareer(name, pos, origin) {
+function newCareer(name, pos, origin, club) {
   const o = ORIGINES[origin];
   S = {
     name, pos, origin, age: 16, ovr: 50 + o.o, rep: 10, mor: 60, money: o.money,
-    club: 0, v2: 1, goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [0],
+    club, v3: 1, goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [club],
     last: null, offers: [], peak: 50 + o.o
   };
   pickEvent(); save(); go('career');
 }
 
-// Lit le formulaire sans dépendre des variables globales du navigateur
 function startCareer() {
   const name = document.getElementById('nm').value.trim() || 'Joueur';
-  newCareer(name, document.getElementById('ps').value, document.getElementById('og').value);
+  newCareer(name, document.getElementById('ps').value, document.getElementById('og').value, parseInt(document.getElementById('cb').value, 10));
 }
 
 function chooseEvent(i) {
@@ -172,18 +157,27 @@ function playSeason() {
   const c = CLUBS[S.club], out = [];
   const perf = Math.round(S.ovr + (S.mor - 50) / 10 + rnd(-6, 6));
   const g = Math.max(0, Math.round(GOALS[S.pos] * (perf - 40) / 2 + rnd(-3, 3)));
-  const win = c.l + rnd(-12, 12) + (perf - 70) / 4;
+  const bonus = (perf - 70) / 4;
   S.goals += g;
-  if (win > 85) { S.trophies.push({ age: S.age, t: 'Championnat', c: c.n }); out.push('🏆 Champion avec ' + c.n); }
-  if (c.l >= 74 && win > 95) { S.trophies.push({ age: S.age, t: 'Coupe d\'Europe', c: c.n }); out.push('⭐ Coupe d\'Europe remportée'); }
+
+  // Championnat : il faut être proche du meilleur club de sa division
+  if (c.l + rnd(-12, 12) + bonus > c.dm - 2) { S.trophies.push({ age: S.age, t: 'Champion de ' + c.dn, c: c.n }); out.push('🏆 Champion de ' + c.dn); }
+  // Coupe nationale
+  if (c.l + rnd(-16, 16) + bonus > c.dm - 2) { S.trophies.push({ age: S.age, t: COUPES[c.c], c: c.n }); out.push('🏆 ' + COUPES[c.c] + ' remportée'); }
+  // Europe : réservée aux clubs de première division proches du sommet
+  if (c.t === 1 && c.l >= c.dm - 15) {
+    const ucl = c.l >= c.dm - 8, e = c.l + rnd(-12, 12) + bonus;
+    if (e > (ucl ? 102 : 92)) { const t = ucl ? 'Ligue des champions' : 'Ligue Europa'; S.trophies.push({ age: S.age, t, c: c.n }); out.push('⭐ ' + t + ' remportée'); }
+  }
   if (perf >= 92 && S.rep >= 60 && Math.random() < 0.6) { S.bd++; S.trophies.push({ age: S.age, t: 'Ballon d\'Or', c: c.n }); out.push('🥇 Ballon d\'Or !'); }
+
   S.rep = clamp(S.rep + Math.round((perf - 70) / 6) + out.length * 3, 0, 100);
   S.money += Math.round(c.l / 6 * (1 + S.rep / 100));
   S.peak = Math.max(S.peak, S.ovr);
 
-  // Offres : jusqu'à 3 clubs (plus forts ; après 31 ans, aussi des clubs un peu moins forts)
-  const lo = S.age >= 31 ? c.l - 12 : c.l + 1;
-  const cand = CLUBS.map((x, i) => i).filter(i => i !== S.club && CLUBS[i].l >= lo && CLUBS[i].l <= Math.min(c.l + 10, 55 + S.rep * 0.42));
+  // Offres : jusqu'à 3 clubs réels (plus forts ; après 31 ans, aussi des clubs un peu moins forts)
+  const lo = S.age >= 31 ? c.l - 12 : c.l + 1, hi = Math.min(c.l + 10, 50 + S.rep * 0.45);
+  const cand = CLUBS.map((x, i) => i).filter(i => i !== S.club && CLUBS[i].l >= lo && CLUBS[i].l <= hi);
   cand.sort(() => Math.random() - 0.5);
   S.offers = Math.random() < 0.75 ? cand.slice(0, rnd(1, 3)) : [];
 
@@ -226,7 +220,7 @@ const bar = (label, v) => `<div class="stat">${label} : ${Math.round(v)}<div cla
 const statsCard = () => `
   <div class="card">
     <h2>${S.name} <span class="muted" style="font-size:16px">${POSTES[S.pos]} · ${S.age} ans</span></h2>
-    <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
+    <p class="muted">${CLUBS[S.club].f} ${CLUBS[S.club].n} (${CLUBS[S.club].dn}) · ${S.money} M€ · ${S.goals} buts · ${S.bd} Ballon(s) d'Or</p>
     ${bar('Niveau', S.ovr)}${bar('Réputation', S.rep)}${bar('Moral', S.mor)}
     ${S.phase !== 'end' && S.age >= 30 ? `<br><button class="ghost" onclick="if (confirm('Prendre ta retraite ?')) retire()">🏁 Prendre ma retraite</button>` : ''}
   </div>`;
@@ -245,11 +239,12 @@ const views = {
       <label>Nom</label><input id="nm" placeholder="Ton nom de joueur" maxlength="20">
       <label>Poste</label><select id="ps">${Object.entries(POSTES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <label>Origine</label><select id="og">${Object.keys(ORIGINES).map(k => `<option>${k}</option>`).join('')}</select>
+      <label>Club formateur</label><select id="cb">${CLUBS.map((c, i) => c.l <= 62 ? `<option value="${i}">${c.f} ${c.n} (${c.dn})</option>` : '').join('')}</select>
       <br><br><button onclick="startCareer()">Signer mon premier contrat</button>
     </div>`,
 
   career: () => {
-    if (!S) return views.home();
+    if (!S) return views.create();
     if (S.phase === 'end') return statsCard() + `
       <div class="card"><h2>Retraite</h2>
       <p>Pic de niveau : <b>${S.peak}</b> · ${S.trophies.length} trophées · ${S.bd} Ballon(s) d'Or.</p>
@@ -266,7 +261,7 @@ const views = {
       ${L.out.map(o => `<span class="tag">${o}</span>`).join('') || '<p class="muted">Pas de trophée cette saison.</p>'}
       <br><br>${offers.length
         ? `<p>📩 ${offers.length > 1 ? 'Plusieurs clubs te contactent' : 'Un club te contacte'} :</p><div class="choices">
-           ${offers.map((o, i) => `<button onclick="transfer(${i})">${CLUBS[o].f} ${CLUBS[o].n} <span class="muted">(niveau ${CLUBS[o].l})</span></button>`).join('')}
+           ${offers.map((o, i) => `<button onclick="transfer(${i})">${CLUBS[o].f} ${CLUBS[o].n} <span class="muted">(${CLUBS[o].dn} · niveau ${CLUBS[o].l})</span></button>`).join('')}
            <button onclick="transfer(-1)">Rester à ${CLUBS[S.club].n}</button></div>`
         : `<button onclick="nextSeason()">Saison suivante</button>`}</div>`;
   },
@@ -296,14 +291,21 @@ const views = {
     : '<div class="card muted">Les légendes que tu auras écrites apparaîtront ici.</div>')
 };
 
-// CORRIGÉ : affiche l'erreur au lieu d'une page blanche
 function render() {
   try {
-    app.innerHTML = views[view]();
+    if (typeof views[view] !== 'function') {
+      app.innerHTML = `<div class="card"><h2>Page introuvable</h2>
+        <p class="muted">${view === 'manager'
+          ? 'Le mode Manager n\'est pas chargé : vérifie que ligues.js et manager.js sont dans le même dossier et ajoutés dans index.html.'
+          : 'Cette page n\'existe pas.'}</p><br>
+        <button onclick="go('home')">Retour à l'accueil</button></div>`;
+    } else {
+      app.innerHTML = views[view]();
+    }
   } catch (e) {
     app.innerHTML = `<div class="card"><h2>Oups, une erreur est survenue</h2>
       <p class="muted">${e.message}</p><br>
-      <button onclick="localStorage.removeItem('g11'); location.reload()">Réinitialiser ma carrière</button></div>`;
+      <button onclick="go('home')">Retour à l'accueil</button></div>`;
     console.error(e);
   }
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
@@ -319,13 +321,15 @@ document.querySelector('#theme').onclick = () =>
 setTheme(localStorage.getItem('g11t') || 'golden');
 
 // Compatibilité avec les anciennes sauvegardes
-if (S) { S.seen = S.seen || []; S.visited = S.visited || [S.club]; S.offers = S.offers || []; }
+if (S) { S.seen = S.seen || []; S.offers = S.offers || []; }
 
-// Migration : l'ancienne liste de 7 clubs vers la nouvelle liste de 34
-if (S && !S.v2) {
-  const OLD = ['Académie de Saint-Brieuc', 'Stade Brestois', 'Olympique Lyonnais', 'AS Monaco', 'Arsenal', 'FC Barcelone', 'Real Madrid'];
-  const m = i => CLUBS.findIndex(c => c.n === OLD[i]);
-  S.club = m(S.club); S.visited = S.visited.map(m); S.offers = []; S.v2 = 1; save();
+// Migration : ancienne liste de clubs fictifs -> vrai club de niveau le plus proche
+if (S && !S.v3) {
+  const oldLevel = i => i < 3 ? [55, 58, 60][i] : 59 + i;
+  const nearest = l => CLUBS.reduce((b, c, i) => Math.abs(c.l - l) < Math.abs(CLUBS[b].l - l) ? i : b, 0);
+  const old = Array.isArray(S.visited) ? S.visited : [S.club];
+  S.visited = [...new Set(old.map(i => nearest(oldLevel(i))))];
+  S.club = nearest(oldLevel(S.club)); S.offers = []; S.v3 = 1; save();
 }
 
 // Sécurité : répare une sauvegarde incohérente au lieu de planter
