@@ -62,7 +62,7 @@ const NATS = [
   "France|🇫🇷|FR|EU|88", "Angleterre|🇬🇧|EN|EU|88", "Espagne|🇪🇸|ES|EU|89", "Italie|🇮🇹|IT|EU|82", "Allemagne|🇩🇪|DE|EU|85",
   "Portugal|🇵🇹|PT|EU|86", "Pays-Bas|🇳🇱||EU|84", "Belgique|🇧🇪||EU|80", "Croatie|🇭🇷||EU|79", "Suisse|🇨🇭||EU|74",
   "Danemark|🇩🇰||EU|75", "Autriche|🇦🇹||EU|74", "Turquie|🇹🇷||EU|74", "Norvège|🇳🇴||EU|72", "Ukraine|🇺🇦||EU|71",
-  "Pologne|🇵🇱||EU|70", "Serbie|🇷🇸||EU|70", "Suède|🇸🇪||EU|70", "Écosse|🏴󠁧󠁢󠁳󠁣󠁴󠁿||EU|68", "Tchéquie|🇨🇿||EU|68",
+    "Pologne|🇵🇱||EU|70", "Serbie|🇷🇸||EU|70", "Suède|🇸🇪||EU|70", "Écosse|🏴||EU|68", "Tchéquie|🇨🇿||EU|68",
   "Hongrie|🇭🇺||EU|66", "Grèce|🇬🇷||EU|64", "Roumanie|🇷🇴||EU|64", "Irlande|🇮🇪||EU|60",
   "Maroc|🇲🇦||AF|80", "Sénégal|🇸🇳||AF|77", "Côte d'Ivoire|🇨🇮||AF|74", "Nigeria|🇳🇬||AF|72", "Égypte|🇪🇬||AF|72",
   "Algérie|🇩🇿||AF|72", "Cameroun|🇨🇲||AF|68", "Tunisie|🇹🇳||AF|66", "Ghana|🇬🇭||AF|66", "Mali|🇲🇱||AF|64",
