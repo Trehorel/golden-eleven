@@ -1,5 +1,7 @@
-// MODE MANAGER v2 : vrais championnats, coupes, Europe (utilise rnd, clamp, load, toast, views, render de script.js ; D, PAIRS, COUPES, EU1 de ligues.js)
+// MODE MANAGER v3 : vrai manager (âge, parcours, philosophie), offres de clubs, retraite
+// (utilise rnd, clamp, load, toast, bar, views, render, NATS, CONT de script.js ; D, PAIRS, COUPES, EU1 de ligues.js)
 let M = load('g11m2', 'null');
+let MC = null;   // création du manager en cours
 const mSave = () => localStorage.setItem('g11m2', JSON.stringify(M));
 
 // Données dérivées (doublons entre divisions : on garde la division supérieure)
@@ -11,8 +13,12 @@ D.forEach(d => {
 });
 const FOR_SORTED = [...EU1.UCL.f, ...EU1.UEL.f].map(s => { const [n, l] = s.split(':'); BASE[n] = +l; return { n, l: +l }; }).sort((a, b) => b.l - a.l);
 
-// Ancienne sauvegarde : on ajoute les nouvelles divisions
+// Ancienne sauvegarde : nouvelles divisions + manager par défaut
 if (M) D.forEach(d => { if (!M.mem[d.id]) { M.mem[d.id] = d.cl.map(c => c.n); d.cl.forEach(c => M.lv[c.n] = c.l); } });
+if (M && !M.mgr) {
+  M.mgr = { name: 'Manager', age: 40, natn: 'France', past: 0, ph: 4, rep: 30, clubs: [M.club], seasons: M.s - 1, titles: M.trophies.length };
+  M.phase = 'play'; M.offers = []; M.fired = false;
+}
 
 const FORMS = {
   '4-4-2': { D: 4, M: 4, A: 2, a: 0, d: 0 }, '4-2-3-1': { D: 4, M: 5, A: 1, a: -0.1, d: 0.2 },
@@ -27,9 +33,28 @@ const Z0 = { p: 0, pts: 0, gf: 0, ga: 0 };
 const STAGE = { po: 'Barrages', r16: '8es de finale', qf: 'Quarts de finale', sf: 'Demi-finale', f: 'Finale' };
 const NEXTSTAGE = { po: 'r16', r16: 'qf', qf: 'sf', sf: 'f', f: 'won' };
 
+// Parcours (réputation de départ) et philosophie de jeu (bonus)
+const PAST = [
+  { n: 'Ancien joueur professionnel', d: 'Le respect du vestiaire dès le premier jour', rep: 30 },
+  { n: 'Entraîneur des jeunes', d: 'Tu as formé des talents pendant des années', rep: 20 },
+  { n: 'Ancien joueur amateur', d: 'Un passionné qui part de zéro', rep: 15 },
+  { n: 'Analyste vidéo', d: 'Un œil tactique hors du commun', rep: 10 }
+];
+const PHIL = [
+  { n: 'Offensif', d: 'Attaque à outrance : plus de buts marqués', fx: { a: 0.25 } },
+  { n: 'Défensif', d: 'Bloc solide : moins de buts encaissés', fx: { d: 0.25 } },
+  { n: 'Formateur', d: 'Les jeunes progressent plus vite', fx: { y: 1 } },
+  { n: 'Tacticien', d: 'Une équipe mieux organisée : +1 de force', fx: { s: 1 } },
+  { n: 'Équilibré', d: 'Un peu d\'attaque, un peu de défense', fx: { a: 0.1, d: 0.1 } }
+];
+const mPh = () => PHIL[M.mgr.ph].fx;
+
 const flag = n => HOME[n] ? HOME[n].f : '🌍';
 const lvl = n => n === M.club ? mStr() : (M.lv[n] ?? BASE[n] ?? 55);
 const shuffle = a => [...a].sort(() => Math.random() - 0.5);
+const mDivOf = n => D.find(d => M.mem[d.id].includes(n)).id;
+// Trophée du manager (conservé d'un club à l'autre)
+const mTro = t => { M.trophies.push({ s: M.s, t, c: M.club }); M.mgr.titles++; };
 
 // ---------- Joueurs ----------
 const mVal = p => Math.max(1, Math.round((p.ovr - 45) ** 2 / 12 * (p.age < 24 ? 1.4 : p.age > 31 ? 0.5 : 1)));
@@ -41,6 +66,10 @@ function mMarket() {
   M.mk = [];
   for (let k = 0; k < 12; k++) M.mk.push(mPlayer(['GAR', 'DEF', 'DEF', 'MIL', 'MIL', 'ATT'][rnd(0, 5)], M.l + rnd(-8, 14), rnd(18, 34)));
 }
+function mNewSquad() {
+  M.sq = [];
+  [['GAR', 2], ['DEF', 6], ['MIL', 6], ['ATT', 4]].forEach(([p, k]) => { for (let j = 0; j < k; j++) M.sq.push(mPlayer(p, M.l + rnd(-10, 6), rnd(19, 33))); });
+}
 function mXI() {
   const f = FORMS[M.f], need = { GAR: 1, DEF: f.D, MIL: f.M, ATT: f.A }, out = [];
   for (const p in need) out.push(...M.sq.filter(x => x.pos === p).sort((a, b) => b.ovr - a.ovr).slice(0, need[p]));
@@ -51,7 +80,7 @@ function mXI() {
   }
   return out;
 }
-const mStr = () => { const t = mXI(); return Math.round(t.reduce((a, p) => a + p.ovr, 0) / t.length); };
+const mStr = () => { const t = mXI(); return Math.round(t.reduce((a, p) => a + p.ovr, 0) / t.length) + (mPh().s || 0); };
 
 // ---------- Matchs ----------
 const mSim = (a, b) => {
@@ -60,8 +89,8 @@ const mSim = (a, b) => {
 };
 // Match du club géré : renvoie [buts du club, buts de l'adversaire]
 const mPlayU = o => {
-  const f = FORMS[M.f], d = mStr() - lvl(o) + 3;
-  return [Math.max(0, Math.round(1.4 + d / 14 + f.a + rnd(-8, 10) / 10)), Math.max(0, Math.round(1.4 - d / 14 - f.d + rnd(-8, 10) / 10))];
+  const f = FORMS[M.f], ph = mPh(), d = mStr() - lvl(o) + 3;
+  return [Math.max(0, Math.round(1.4 + d / 14 + f.a + (ph.a || 0) + rnd(-8, 10) / 10)), Math.max(0, Math.round(1.4 - d / 14 - f.d - (ph.d || 0) + rnd(-8, 10) / 10))];
 };
 const mWin = (gu, go, o) => gu > go || (gu === go && Math.random() < 0.5 + (mStr() - lvl(o)) / 100);
 const sym = (gu, go) => gu > go ? '✅' : gu === go ? '🟰' : '❌';
@@ -126,14 +155,65 @@ function mSeason() {
   for (let r = 1; r <= N; r++) { M.cal.push({ k: 'L', i: r - 1 }); (at[r] || []).forEach(e => M.cal.push(e)); }
 }
 
-function mStart(i) {
+// ---------- Création du manager ----------
+function mcNext() {
+  MC.name = document.getElementById('mn').value.trim() || 'Manager';
+  MC.nat = parseInt(document.getElementById('mt').value, 10);
+  MC.age = parseInt(document.getElementById('ma').value, 10);
+  MC.step = 1; render();
+}
+function mcPick(i) {
+  MC[MC.step === 1 ? 'past' : 'ph'] = i;
+  MC.step++;
+  if (MC.step === 3) mcScout();
+  render();
+}
+function mcBack() { MC.step = Math.max(0, MC.step - 1); render(); }
+// Clubs prêts à te donner ta chance, selon ta réputation (ceux de ton pays en priorité)
+function mcScout() {
+  const cap = 44 + PAST[MC.past].rep * 0.5 + 4, nc = NATS[MC.nat].c;
+  let pool = shuffle(ALL.filter(n => BASE[n] <= cap));
+  if (pool.length < 4) pool = [...ALL].sort((a, b) => BASE[a] - BASE[b]).slice(0, 6);
+  const home = pool.filter(n => nc && HOME[n].c === nc).slice(0, 2);
+  MC.clubs = [...home, ...pool.filter(n => !home.includes(n))].slice(0, 4);
+}
+function mHire(i) {
   const n = ALL[i], l = BASE[n];
-  M = { club: n, div: HOME[n].id, l, f: '4-4-2', sq: [], mk: [], nid: 1, budget: Math.round(Math.max(0, l - 48) ** 2 / 6), s: 1, mem: {}, lv: {}, tab: {}, qual: null, trophies: [], hist: [], last: '', msg: '', sec: 'table' };
+  M = {
+    mgr: { name: MC.name, age: MC.age, natn: NATS[MC.nat].n, past: MC.past, ph: MC.ph, rep: PAST[MC.past].rep, clubs: [n], seasons: 0, titles: 0 },
+    phase: 'play', offers: [], fired: false,
+    club: n, div: HOME[n].id, l, f: '4-4-2', sq: [], mk: [], nid: 1, budget: Math.round(Math.max(0, l - 48) ** 2 / 6),
+    s: 1, mem: {}, lv: {}, tab: {}, qual: null, trophies: [], hist: [], last: '', msg: '', sec: 'table'
+  };
   D.forEach(d => { M.mem[d.id] = d.cl.map(c => c.n); d.cl.forEach(c => M.lv[c.n] = c.l); });
-  [['GAR', 2], ['DEF', 6], ['MIL', 6], ['ATT', 4]].forEach(([p, k]) => { for (let j = 0; j < k; j++) M.sq.push(mPlayer(p, l + rnd(-10, 6), rnd(19, 33))); });
-  mMarket(); mSeason(); mSave(); render();
+  mNewSquad(); mMarket(); mSeason();
+  MC = null; mSave(); render();
 }
 
+// ---------- Offres de clubs, retraite ----------
+function mOffers(fired) {
+  const cur = BASE[M.club], cap = 44 + M.mgr.rep * 0.5 + 6;
+  let c = ALL.filter(n => n !== M.club && BASE[n] <= cap && (fired ? BASE[n] <= cur : BASE[n] >= cur - 14));
+  if (fired && c.length < 2) c = [...ALL].sort((a, b) => BASE[a] - BASE[b]).slice(0, 4);
+  c = shuffle(c).slice(0, fired ? 3 : rnd(1, 3));
+  M.offers = (fired || Math.random() < 0.8) ? c : [];
+}
+function mJoin(i) {
+  const n = M.offers[i];
+  M.club = n; M.div = mDivOf(n); M.l = Math.round(M.lv[n] ?? BASE[n]);
+  M.budget = Math.round(Math.max(0, M.l - 48) ** 2 / 6);
+  mNewSquad(); M.mgr.clubs.push(n);
+  M.offers = []; M.fired = false; M.phase = 'play'; M.msg = `Nouveau défi : tu diriges maintenant ${n} !`; M.last = '';
+  mSeason(); mMarket(); mSave(); render();
+}
+function mStay() { M.offers = []; M.phase = 'play'; mSave(); render(); }
+function mRetire() {
+  if (!confirm('Prendre ta retraite de manager ?')) return;
+  M.phase = 'end'; mSave(); render();
+}
+function mNew() { M = null; MC = null; localStorage.removeItem('g11m2'); render(); }
+
+// ---------- Déroulement ----------
 function mLeague(i) {
   M.msg = '';
   M.sch[i].forEach(([a, b]) => {
@@ -161,7 +241,7 @@ function mCup() {
   if (a.length % 2) w.push(a[a.length - 1]);
   C.alive = w; C.r++;
   if (!w.includes(M.club)) C.out = true;
-  else if (w.length === 1) { M.trophies.push({ s: M.s, t: COUPES[C.c] }); M.msg = `🏆 Tu remportes la ${COUPES[C.c]} !`; }
+  else if (w.length === 1) { mTro(COUPES[C.c]); M.msg = `🏆 Tu remportes la ${COUPES[C.c]} !`; }
 }
 
 // Retourne true si le club a joué un match européen
@@ -191,7 +271,7 @@ function mEuro(e) {
   E.phase = win ? NEXTSTAGE[e.s] : 'out';
   M.msg = '';
   M.last = `${tag} · ${STAGE[e.s]} : ${flag(o)} ${o} ${gu}-${go}${gu === go ? ' (t.a.b.)' : ''} ${win ? '✅' : '❌'}`;
-  if (E.phase === 'won') { M.trophies.push({ s: M.s, t: tag }); M.msg = `🏆 Tu remportes la ${tag} !`; }
+  if (E.phase === 'won') { mTro(tag); M.msg = `🏆 Tu remportes la ${tag} !`; }
   return true;
 }
 
@@ -220,8 +300,10 @@ function mEndSeason() {
   const own = M.div, rk = {}, notes = [];
   D.forEach(d => { rk[d.id] = d.id === own ? mRank(M.mem[d.id], M.tab) : mRank(M.mem[d.id], mSimDiv(M.mem[d.id])); });
   const pos = rk[own].indexOf(M.club) + 1, n = rk[own].length;
+  // Classement attendu pour ce club (selon son niveau) : sert à juger la saison du manager
+  const exp = 1 + M.mem[own].filter(c => c !== M.club && (M.lv[c] ?? BASE[c]) > M.l).length;
   notes.push(`Saison ${M.s} : ${pos}e de ${DV[own].n}.`);
-  if (pos === 1) M.trophies.push({ s: M.s, t: 'Champion de ' + DV[own].n });
+  if (pos === 1) mTro('Champion de ' + DV[own].n);
 
   // Coupes : on termine toutes les coupes nationales
   const cupW = {};
@@ -242,6 +324,7 @@ function mEndSeason() {
   });
 
   // Montées, descentes et barrages (seulement les pays qui ont deux divisions)
+  let relegated = false;
   PAIRS.forEach(top => {
     const low = D[D.indexOf(top) + 1], rt = rk[top.id], rl = rk[low.id];
     const down = rt.slice(-2), up = rl.slice(0, 2), bar = rt[rt.length - 3], chal = rl[2];
@@ -252,15 +335,27 @@ function mEndSeason() {
     M.mem[top.id] = rt.filter(c => !rel.includes(c)).concat(prom);
     M.mem[low.id] = rl.filter(c => !prom.includes(c)).concat(rel);
     if (prom.includes(M.club)) { M.div = top.id; notes.push(`⬆️ Promotion en ${top.n} !`); }
-    if (rel.includes(M.club)) { M.div = low.id; notes.push(`⬇️ Relégation en ${low.n}.`); }
+    if (rel.includes(M.club)) { M.div = low.id; relegated = true; notes.push(`⬇️ Relégation en ${low.n}.`); }
   });
   M.qual = qual;
 
-  // Primes, vieillissement, retraites, jeunes
+  // Réputation du manager, âge, licenciement éventuel et propositions de clubs
+  const won = M.trophies.filter(t => t.s === M.s).length;
+  const dRep = clamp(Math.round((exp - pos) * 0.5), -4, 6) + won * 4;
+  M.mgr.rep = clamp(M.mgr.rep + dRep, 0, 100);
+  M.mgr.age++; M.mgr.seasons++;
+  notes.push(`Réputation : ${dRep >= 0 ? '+' : ''}${dRep}.`);
+  const fired = relegated || (pos >= n - 1 && exp <= n - 4);
+  mOffers(fired);
+  M.fired = fired && M.offers.length > 0;
+  M.phase = M.offers.length ? 'offers' : 'play';
+  if (M.fired) notes.push('❌ Tu es licencié.');
+
+  // Primes, vieillissement des joueurs, retraites, jeunes
   const bonus = Math.round((n - pos + 1) * M.l / 14) + (pos === 1 ? 20 : 0) + (M.eu ? 15 : 0);
   M.budget += bonus; notes.push(`Prime : +${bonus} M€.`);
-  const gone = [];
-  M.sq.forEach(p => { p.age++; p.ovr = clamp(p.ovr + (p.age < 24 ? rnd(1, 4) : p.age <= 29 ? rnd(-1, 2) : p.age >= 31 ? -rnd(1, 3) : 0), 40, 97); });
+  const gone = [], y = mPh().y || 0;
+  M.sq.forEach(p => { p.age++; p.ovr = clamp(p.ovr + (p.age < 24 ? rnd(1, 4) + y : p.age <= 29 ? rnd(-1, 2) : p.age >= 31 ? -rnd(1, 3) : 0), 40, 97); });
   M.sq = M.sq.filter(p => { const r = p.age >= 39 || (p.age >= 36 && Math.random() < (p.age - 35) * 0.25); if (r) gone.push(`${p.n} (${p.age} ans)`); return !r; });
   if (gone.length) notes.push(`🏁 Retraite : ${gone.join(', ')}.`);
   for (let k = 0; k < 2; k++) M.sq.push(mPlayer(['DEF', 'MIL', 'ATT'][rnd(0, 2)], M.l + rnd(-15, -5), rnd(17, 19)));
@@ -287,7 +382,6 @@ function mSell(id) {
 }
 const mForm = k => { M.f = k; mSave(); render(); };
 const mSec = s => { M.sec = s; mSave(); render(); };
-const mQuit = () => { if (confirm('Quitter ce club et en diriger un autre ? (la partie en cours sera perdue)')) { M = null; localStorage.removeItem('g11m2'); render(); } };
 
 // ---------- Affichage ----------
 const mRow = (p, btn) => `<div class="row"><span>${p.pos} · <b>${p.n}</b></span><span class="muted">${p.ovr} · ${p.age} ans · ${mVal(p)} M€</span>${btn}</div>`;
@@ -308,13 +402,50 @@ function mCups() {
   return `<h2>${COUPES[C.c]}</h2><p class="muted">${C.out ? 'Éliminé' : C.alive.length === 1 ? 'Vainqueur !' : `Toujours en lice (${C.alive.length} clubs restants)`}</p><br>
     <h2>Europe</h2>` + (E ? `<p><b>${tag}</b> · ${E.phase === 'lg' ? `phase de ligue ${E.played}/8 · ${E.pts} pts` : E.phase === 'out' ? 'éliminé' : E.phase === 'won' ? 'VAINQUEUR 🏆' : 'en phase finale : ' + STAGE[E.phase]}${E.rank ? ` · ${E.rank}e de la phase de ligue` : ''}</p>
       ${E.phase === 'lg' ? `<p class="muted">Adversaires : ${E.opp.map(o => flag(o) + ' ' + o).join(', ')}</p>` : ''}` : '<p class="muted">Non qualifié cette saison. Termine dans les places européennes de ton championnat ou gagne ta coupe !</p>') +
-    `<br><h2>Palmarès</h2>` + (M.trophies.length ? M.trophies.map(t => `<div class="row"><span>🏆 ${t.t}</span><span class="muted">saison ${t.s}</span></div>`).join('') : '<p class="muted">Aucun trophée pour le moment.</p>');
+    `<br><h2>Palmarès du manager</h2>` + (M.trophies.length ? M.trophies.map(t => `<div class="row"><span>🏆 ${t.t}${t.c ? ' · ' + t.c : ''}</span><span class="muted">saison ${t.s}</span></div>`).join('') : '<p class="muted">Aucun trophée pour le moment.</p>');
+}
+
+function mWizard() {
+  if (!MC) MC = { step: 0 };
+  const prog = `<div class="bar" style="margin-bottom:18px"><i style="width:${(MC.step + 1) / 4 * 100}%"></i></div>`;
+  if (MC.step === 0) return `<div class="card">${prog}<h2>Crée ton manager</h2><p class="muted">Étape 1/4</p>
+    <label>Nom</label><input id="mn" placeholder="Ton nom de manager" maxlength="20" value="${MC.name || ''}">
+    <label>Nationalité</label><select id="mt">${Object.entries(CONT).map(([k, v]) => `<optgroup label="${v}">${NATS.map((n, i) => n.k === k ? `<option value="${i}" ${i === MC.nat ? 'selected' : ''}>${n.f} ${n.n}</option>` : '').join('')}</optgroup>`).join('')}</select>
+    <label>Âge</label><select id="ma">${Array.from({ length: 33 }, (_, i) => 28 + i).map(a => `<option value="${a}" ${a === (MC.age || 40) ? 'selected' : ''}>${a} ans</option>`).join('')}</select>
+    <br><br><button onclick="mcNext()">Suivant →</button></div>`;
+  if (MC.step <= 2) {
+    const st = MC.step === 1 ? { t: 'Ton parcours', q: 'Comment es-tu arrivé sur un banc de touche ?', o: PAST } : { t: 'Ta philosophie de jeu', q: 'Quel est ton style ?', o: PHIL };
+    return `<div class="card">${prog}<h2>${st.t}</h2><p class="muted">Étape ${MC.step + 1}/4 · ${st.q}</p>
+      <div class="choices">${st.o.map((o, i) => `<button onclick="mcPick(${i})"><b>${o.n}</b><br><small>${o.d}</small></button>`).join('')}</div>
+      <br><button class="ghost" onclick="mcBack()">← Retour</button></div>`;
+  }
+  return `<div class="card">${prog}<h2>Ils te font confiance !</h2><p class="muted">Étape 4/4 · Quel club vas-tu diriger pour débuter ?</p>
+    <div class="choices">${MC.clubs.map(n => `<button onclick="mHire(${ALL.indexOf(n)})">${flag(n)} <b>${n}</b><br><small>${DV[HOME[n].id].n} · niveau ${BASE[n]}</small></button>`).join('')}</div>
+    <br><button class="ghost" onclick="mcBack()">← Retour</button></div>`;
+}
+
+function mOffersView() {
+  return `<div class="card"><h2>${M.fired ? '❌ Tu as été licencié' : '📩 Des clubs te contactent'}</h2>
+    <p class="muted" style="margin-bottom:12px">${M.msg}</p>
+    <div class="choices">${M.offers.map((n, i) => `<button onclick="mJoin(${i})">${flag(n)} <b>${n}</b><br><small>${DV[mDivOf(n)].n} · niveau ${Math.round(M.lv[n] ?? BASE[n])}</small></button>`).join('')}
+    ${M.fired ? '' : `<button onclick="mStay()">Rester à ${M.club}</button>`}</div></div>`;
+}
+
+function mEndView() {
+  const g = M.mgr, nat = NATS.find(n => n.n === g.natn);
+  return `<div class="card"><h2>🏁 Retraite du manager</h2>
+    <p><b>${nat ? nat.f + ' ' : ''}${g.name}</b> · ${g.age} ans · ${g.seasons} saisons · ${g.titles} trophée(s)</p>
+    <p class="muted" style="margin:8px 0">Clubs dirigés : ${g.clubs.map(c => flag(c) + ' ' + c).join(' → ')}</p>
+    ${M.trophies.length ? M.trophies.map(t => `<div class="row"><span>🏆 ${t.t}${t.c ? ' · ' + t.c : ''}</span><span class="muted">saison ${t.s}</span></div>`).join('') : '<p class="muted">Aucun trophée.</p>'}
+    <br><button onclick="mNew()">Nouvelle carrière de manager</button></div>`;
 }
 
 views.manager = () => {
-  if (!M) return `<h2>Mode Manager</h2><p class="muted" style="margin-bottom:16px">Choisis le club que tu veux diriger. Plus il est fort, plus son budget est élevé.</p>` +
-    D.map(d => `<h2 style="margin-top:20px">${d.f} ${d.n}</h2><div class="grid">${d.cl.map(c => `<button class="ghost" onclick="mStart(${ALL.indexOf(c.n)})">${c.n}<br><small>Niveau ${c.l}</small></button>`).join('')}</div>`).join('');
-  const d = DV[M.div], team = mXI(), line = p => `<div class="line">${team.filter(x => x.pos === p).map(x => `<div class="pl">${x.n}<br><b>${x.ovr}</b></div>`).join('')}</div>`;
+  if (!M) return mWizard();
+  if (M.phase === 'offers') return mOffersView();
+  if (M.phase === 'end') return mEndView();
+  const g = M.mgr, nat = NATS.find(n => n.n === g.natn), d = DV[M.div], team = mXI();
+  const line = p => `<div class="line">${team.filter(x => x.pos === p).map(x => `<div class="pl">${x.n}<br><b>${x.ovr}</b></div>`).join('')}</div>`;
   const sec = {
     table: mTable, cups: mCups,
     comp: () => `<h2>Composition</h2>${Object.keys(FORMS).map(k => `<button class="sm ${M.f === k ? '' : 'ghost'}" onclick="mForm('${k}')">${k}</button>`).join('')}
@@ -323,10 +454,12 @@ views.manager = () => {
     mk: () => `<h2>Marché des transferts</h2>` + (M.mk.map(p => mRow(p, `<button class="sm" onclick="mBuy(${p.id})">Acheter</button>`)).join('') || '<p class="muted">Plus de joueur disponible.</p>')
   }[M.sec];
   return `<div class="card"><h2>${d.f} ${M.club}</h2>
+      <p class="muted">👔 ${nat ? nat.f + ' ' : ''}${g.name} · ${g.age} ans · ${PHIL[g.ph].n}</p>
       <p class="muted">Saison ${M.s} · ${d.n} · 💰 ${M.budget} M€ · Force ${mStr()}</p>
+      ${bar('Réputation du manager', g.rep)}
       ${M.msg ? `<p style="margin-top:8px">${M.msg}</p>` : ''}${M.last ? `<p class="muted" style="margin-top:8px">Dernier match : ${M.last}</p>` : ''}<br>
       <button onclick="mNext()">▶ Jouer : ${mNextLabel()}</button>
-      <button class="ghost" onclick="mQuit()">Changer de club</button></div>
+      ${g.age >= 55 ? '<button class="ghost" onclick="mRetire()">🏁 Prendre ma retraite</button>' : ''}</div>
     <div>${[['table', 'Classement'], ['cups', 'Coupes & Europe'], ['comp', 'Composition'], ['sq', 'Effectif'], ['mk', 'Marché']].map(([k, l]) => `<button class="sm ${M.sec === k ? '' : 'ghost'}" onclick="mSec('${k}')">${l}</button>`).join('')}</div>
     <div class="card" style="margin-top:12px">${sec()}</div>`;
 };
