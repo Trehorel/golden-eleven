@@ -1,4 +1,4 @@
-// MODE MANAGER v2 : vrais championnats, coupes, Europe (utilise rnd, clamp, load, toast, views, render de script.js ; D, COUPES, EU1 de ligues.js)
+// MODE MANAGER v2 : vrais championnats, coupes, Europe (utilise rnd, clamp, load, toast, views, render de script.js ; D, PAIRS, COUPES, EU1 de ligues.js)
 let M = load('g11m2', 'null');
 const mSave = () => localStorage.setItem('g11m2', JSON.stringify(M));
 
@@ -10,6 +10,9 @@ D.forEach(d => {
   DV[d.id] = d;
 });
 const FOR_SORTED = [...EU1.UCL.f, ...EU1.UEL.f].map(s => { const [n, l] = s.split(':'); BASE[n] = +l; return { n, l: +l }; }).sort((a, b) => b.l - a.l);
+
+// Ancienne sauvegarde : on ajoute les nouvelles divisions
+if (M) D.forEach(d => { if (!M.mem[d.id]) { M.mem[d.id] = d.cl.map(c => c.n); d.cl.forEach(c => M.lv[c.n] = c.l); } });
 
 const FORMS = {
   '4-4-2': { D: 4, M: 4, A: 2, a: 0, d: 0 }, '4-2-3-1': { D: 4, M: 5, A: 1, a: -0.1, d: 0.2 },
@@ -230,16 +233,16 @@ function mEndSeason() {
   if (M.cup.out) notes.push(`Éliminé en ${COUPES[M.cup.c]}.`);
   if (M.eu) notes.push(M.eu.phase === 'out' ? `Éliminé en ${M.eu.comp === 'UCL' ? 'Ligue des champions' : 'Ligue Europa'}.` : '');
 
-  // Qualifications européennes de la saison suivante
+  // Qualifications européennes de la saison suivante (seulement les championnats qui y ont accès)
   const qual = { UCL: [], UEL: [] };
-  D.filter(d => d.t === 1).forEach(d => {
+  D.filter(d => d.ucl).forEach(d => {
     const r = rk[d.id], u = r.slice(0, d.ucl), w = cupW[d.c], uel = w && !u.includes(w) ? [w] : [];
     r.slice(d.ucl).forEach(x => { if (uel.length < d.uel && !uel.includes(x)) uel.push(x); });
     qual.UCL.push(...u); qual.UEL.push(...uel);
   });
 
-  // Montées, descentes et barrages
-  D.filter(d => d.t === 1).forEach(top => {
+  // Montées, descentes et barrages (seulement les pays qui ont deux divisions)
+  PAIRS.forEach(top => {
     const low = D[D.indexOf(top) + 1], rt = rk[top.id], rl = rk[low.id];
     const down = rt.slice(-2), up = rl.slice(0, 2), bar = rt[rt.length - 3], chal = rl[2];
     const [x, y] = bar === M.club ? mPlayU(chal) : chal === M.club ? mPlayU(bar).reverse() : mSim(lvl(bar), lvl(chal));
@@ -291,10 +294,10 @@ const mRow = (p, btn) => `<div class="row"><span>${p.pos} · <b>${p.n}</b></span
 
 function mTable() {
   const d = DV[M.div], r = mRank(M.mem[M.div], M.tab), n = r.length;
-  const zone = i => d.t === 1
+  const zone = i => d.np ? '' : d.t === 1
     ? (i < d.ucl ? 'z1' : i < d.ucl + d.uel ? 'z2' : i === n - 3 ? 'z3' : i >= n - 2 ? 'z4' : '')
     : (i < 2 ? 'z5' : i === 2 ? 'z3' : '');
-  const legend = d.t === 1 ? '🔵 Ligue des champions · 🟠 Ligue Europa · ⚪ Barrage · 🔴 Relégation' : '🟢 Promotion · ⚪ Barrage de promotion';
+  const legend = d.np ? 'Championnat sans relégation (division unique)' : d.t === 1 ? '🔵 Ligue des champions · 🟠 Ligue Europa · ⚪ Barrage · 🔴 Relégation' : '🟢 Promotion · ⚪ Barrage de promotion';
   return `<h2>${d.f} ${d.n}</h2><p class="muted" style="margin-bottom:10px">${legend}</p>` + r.map((c, i) => {
     const x = M.tab[c] || Z0;
     return `<div class="row ${zone(i)} ${c === M.club ? 'me' : ''}"><span>${i + 1}. ${c}</span><span class="muted">${x.p} j · ${x.gf - x.ga > 0 ? '+' : ''}${x.gf - x.ga} · <b>${x.pts} pts</b></span></div>`;
