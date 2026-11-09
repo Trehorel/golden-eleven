@@ -62,16 +62,16 @@ const NATS = [
   "France|🇫🇷|FR|EU|88", "Angleterre|🇬🇧|EN|EU|88", "Espagne|🇪🇸|ES|EU|89", "Italie|🇮🇹|IT|EU|82", "Allemagne|🇩🇪|DE|EU|85",
   "Portugal|🇵🇹|PT|EU|86", "Pays-Bas|🇳🇱||EU|84", "Belgique|🇧🇪||EU|80", "Croatie|🇭🇷||EU|79", "Suisse|🇨🇭||EU|74",
   "Danemark|🇩🇰||EU|75", "Autriche|🇦🇹||EU|74", "Turquie|🇹🇷||EU|74", "Norvège|🇳🇴||EU|72", "Ukraine|🇺🇦||EU|71",
-    "Pologne|🇵🇱||EU|70", "Serbie|🇷🇸||EU|70", "Suède|🇸🇪||EU|70", "Écosse|🏴||EU|68", "Tchéquie|🇨🇿||EU|68",
+  "Pologne|🇵🇱||EU|70", "Serbie|🇷🇸||EU|70", "Suède|🇸🇪||EU|70", "Écosse|🏴||EU|68", "Tchéquie|🇨🇿||EU|68",
   "Hongrie|🇭🇺||EU|66", "Grèce|🇬🇷||EU|64", "Roumanie|🇷🇴||EU|64", "Irlande|🇮🇪||EU|60",
-  "Maroc|🇲🇦||AF|80", "Sénégal|🇸🇳||AF|77", "Côte d'Ivoire|🇨🇮||AF|74", "Nigeria|🇳🇬||AF|72", "Égypte|🇪🇬||AF|72",
+  "Maroc|🇲🇦|MA|AF|80", "Sénégal|🇸🇳||AF|77", "Côte d'Ivoire|🇨🇮||AF|74", "Nigeria|🇳🇬||AF|72", "Égypte|🇪🇬|EG|AF|72",
   "Algérie|🇩🇿||AF|72", "Cameroun|🇨🇲||AF|68", "Tunisie|🇹🇳||AF|66", "Ghana|🇬🇭||AF|66", "Mali|🇲🇱||AF|64",
-  "RD Congo|🇨🇩||AF|62", "Afrique du Sud|🇿🇦||AF|60", "Burkina Faso|🇧🇫||AF|58", "Cap-Vert|🇨🇻||AF|56",
-  "Argentine|🇦🇷||SA|90", "Brésil|🇧🇷||SA|88", "Uruguay|🇺🇾||SA|80", "Colombie|🇨🇴||SA|79", "Équateur|🇪🇨||SA|70",
+  "RD Congo|🇨🇩||AF|62", "Afrique du Sud|🇿🇦|ZA|AF|60", "Burkina Faso|🇧🇫||AF|58", "Cap-Vert|🇨🇻||AF|56",
+  "Argentine|🇦🇷|AR|SA|90", "Brésil|🇧🇷|BR|SA|88", "Uruguay|🇺🇾||SA|80", "Colombie|🇨🇴||SA|79", "Équateur|🇪🇨||SA|70",
   "Paraguay|🇵🇾||SA|64", "Chili|🇨🇱||SA|64", "Pérou|🇵🇪||SA|60", "Venezuela|🇻🇪||SA|58", "Bolivie|🇧🇴||SA|52",
-  "États-Unis|🇺🇸||NA|74", "Mexique|🇲🇽||NA|74", "Canada|🇨🇦||NA|68", "Costa Rica|🇨🇷||NA|60", "Panama|🇵🇦||NA|58",
+  "États-Unis|🇺🇸|US|NA|74", "Mexique|🇲🇽|MX|NA|74", "Canada|🇨🇦||NA|68", "Costa Rica|🇨🇷||NA|60", "Panama|🇵🇦||NA|58",
   "Jamaïque|🇯🇲||NA|56", "Haïti|🇭🇹||NA|50",
-  "Japon|🇯🇵||AS|78", "Corée du Sud|🇰🇷||AS|74", "Iran|🇮🇷||AS|70", "Australie|🇦🇺||AS|66", "Arabie saoudite|🇸🇦||AS|62",
+  "Japon|🇯🇵|JP|AS|78", "Corée du Sud|🇰🇷||AS|74", "Iran|🇮🇷||AS|70", "Australie|🇦🇺||AS|66", "Arabie saoudite|🇸🇦|KSA|AS|62",
   "Jordanie|🇯🇴||AS|56", "Qatar|🇶🇦||AS|58", "Ouzbékistan|🇺🇿||AS|58", "Irak|🇮🇶||AS|54", "Chine|🇨🇳||AS|50"
 ].map(s => {
   const [n, f, c, k, l] = s.split('|');
@@ -149,7 +149,7 @@ function newCareer(club) {
   S = {
     name: C.name, pos: C.pos, natn: NATS[C.nat].n, dream: C.dream, prof: p, origin: p[0],
     age: 16, ovr, rep: clamp(10 + b.r, 0, 100), mor: clamp(60 + b.m, 0, 100), money: Math.max(0, b.$),
-    club, v5: 1, mem: memInit(), qual: null, rank: 0,
+    club, v5: 1, v6: 1, mem: memInit(), qual: null, rank: 0,
     goals: 0, bd: 0, trophies: [], phase: 'event', ev: 0, seen: [], visited: [club],
     last: null, offers: [], peak: ovr
   };
@@ -361,7 +361,7 @@ function playSeason() {
 
   // 5. Qualifications européennes de la saison suivante
   const qual = { UCL: [], UEL: [] };
-  CDIV.filter(d => d.t === 1).forEach(d => {
+  CDIV.filter(d => d.ucl).forEach(d => {
     const r = rk[d.id], u = r.slice(0, d.ucl), w = cupW[d.c], uel = w && !u.includes(w) ? [w] : [];
     r.slice(d.ucl).forEach(x => { if (uel.length < d.uel && !uel.includes(x)) uel.push(x); });
     qual.UCL.push(...u); qual.UEL.push(...uel);
@@ -370,8 +370,8 @@ function playSeason() {
   if (qual.UCL.includes(me)) out.push('✅ Qualifié pour la Ligue des champions');
   else if (qual.UEL.includes(me)) out.push('✅ Qualifié pour la Ligue Europa');
 
-  // 6. Montées, descentes et barrages
-  CDIV.filter(d => d.t === 1).forEach(top => {
+  // 6. Montées, descentes et barrages (seulement pour les pays qui ont deux divisions)
+  CDIV.filter((d, i) => d.t === 1 && CDIV[i + 1] && CDIV[i + 1].t === 2 && CDIV[i + 1].c === d.c).forEach(top => {
     const low = CDIV[CDIV.indexOf(top) + 1], rt = rk[top.id], rl = rk[low.id];
     const down = rt.slice(-2), up = rl.slice(0, 2), bar = rt[rt.length - 3], chal = rl[2];
     const [x, y] = cSim(cLv(bar), cLv(chal)), barWins = x > y || (x === y && Math.random() < 0.55);
@@ -569,6 +569,16 @@ if (S && !S.v4 && !S.v5) { S.mem = memInit(); S.qual = null; S.rank = 0; S.v4 = 
 if (S && S.nat !== undefined && !S.natn) {
   const OLDN = ['France', 'Angleterre', 'Espagne', 'Italie', 'Allemagne', 'Portugal', 'Pays-Bas', 'Belgique', 'Brésil', 'Argentine', 'Maroc', 'Sénégal', 'Côte d\'Ivoire', 'Nigeria', 'Croatie', 'Japon'];
   S.natn = OLDN[S.nat] || 'France'; save();
+}
+
+// Migration : l'ajout des nouveaux clubs change l'ordre de la liste -> on retrouve ton club par son nom
+if (S && S.v5 && !S.v6) {
+  const _s2 = new Set();
+  const OLDC = D.slice(0, 12).flatMap(d => d.cl.filter(c => !_s2.has(c.n) && _s2.add(c.n)).map(c => ({ n: c.n, l: _lv[c.n] }))).sort((a, b) => a.l - b.l);
+  const idx = i => OLDC[i] ? Math.max(0, CLUBS.findIndex(c => c.n === OLDC[i].n)) : 0;
+  S.club = idx(S.club); S.visited = S.visited.map(idx); S.offers = [];
+  CDIV.forEach(d => { if (!S.mem[d.id]) S.mem[d.id] = [...d.names]; });
+  S.v6 = 1; save();
 }
 
 // Sécurité : répare une sauvegarde incohérente au lieu de planter
