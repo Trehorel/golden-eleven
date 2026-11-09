@@ -1,6 +1,10 @@
 // DONNÉES : championnats, coupes, Europe
 const T = (lv, ...g) => g.flatMap((a, i) => a.map(n => ({ n, l: lv[i] })));
-const COUPES = { FR: 'Coupe de France', IT: 'Coppa Italia', DE: 'DFB-Pokal', EN: 'FA Cup', ES: 'Copa del Rey', PT: 'Taça de Portugal' };
+const COUPES = {
+  FR: 'Coupe de France', IT: 'Coppa Italia', DE: 'DFB-Pokal', EN: 'FA Cup', ES: 'Copa del Rey', PT: 'Taça de Portugal',
+  BR: 'Copa do Brasil', AR: 'Copa Argentina', KSA: 'Coupe du Roi', US: 'US Open Cup', MX: 'Copa MX', JP: 'Coupe de l\'Empereur',
+  MA: 'Coupe du Trône', EG: 'Coupe d\'Égypte', ZA: 'Nedbank Cup'
+};
 
 // Ordre important : chaque division de niveau 1 est suivie de sa division de niveau 2
 const D = [
@@ -49,8 +53,43 @@ const D = [
   { id: 'P2', n: 'Liga Portugal 2', c: 'PT', f: '🇵🇹', t: 2, cl: T([55, 50, 47],
     ['Marítimo', 'Portimonense SC', 'FC Vizela', 'Farense', 'Académica de Coimbra', 'FC Paços de Ferreira', 'Chaves'],
     ['Leiria', 'Feirense', 'SCU Torreense', 'FC Penafiel', 'Sporting da Covilhã', 'UD Oliveirense', 'Lusitânia de Lourosa', 'Leixões SC'],
-    ['Benfica B', 'FC Porto B', 'Sporting CP B']) }
+    ['Benfica B', 'FC Porto B', 'Sporting CP B']) },
+
+  // ---------- Autres continents (division unique, sans relégation) ----------
+  { id: 'BR', n: 'Brasileirão', c: 'BR', f: '🇧🇷', t: 1, np: true, ucl: 0, uel: 0, cl: T([80, 72, 66, 60],
+    ['Palmeiras', 'Flamengo'], ['Botafogo', 'Fluminense', 'Atlético Mineiro', 'São Paulo', 'Corinthians', 'Internacional', 'Grêmio'],
+    ['Cruzeiro', 'Santos', 'Vasco da Gama', 'Bahia', 'Fortaleza', 'Athletico Paranaense', 'Red Bull Bragantino', 'Vitória'],
+    ['Juventude', 'Ceará', 'Mirassol']) },
+  { id: 'AR', n: 'Liga Profesional', c: 'AR', f: '🇦🇷', t: 1, np: true, ucl: 0, uel: 0, cl: T([78, 68, 62],
+    ['River Plate', 'Boca Juniors'], ['Racing Club', 'Independiente', 'San Lorenzo', 'Estudiantes', 'Vélez Sarsfield', 'Talleres'],
+    ['Rosario Central', "Newell's Old Boys", 'Lanús', 'Argentinos Juniors', 'Defensa y Justicia', 'Huracán', 'Godoy Cruz', 'Belgrano', 'Platense', 'Tigre']) },
+  { id: 'KSA', n: 'Saudi Pro League', c: 'KSA', f: '🇸🇦', t: 1, np: true, ucl: 0, uel: 0, cl: T([80, 74, 62, 56],
+    ['Al-Hilal'], ['Al-Nassr', 'Al-Ittihad', 'Al-Ahli', 'Al-Qadsiah'], ['Al-Shabab', 'Al-Ettifaq', 'Al-Fayha', 'Al-Taawoun', 'Al-Fateh', 'Damac'],
+    ['Al-Khaleej', 'Al-Raed', 'Al-Riyadh', 'Al-Okhdood', 'Al-Kholood', 'Al-Orobah', 'Al-Najma']) },
+  { id: 'US', n: 'MLS', c: 'US', f: '🇺🇸', t: 1, np: true, ucl: 0, uel: 0, cl: T([72, 66, 60, 56],
+    ['Inter Miami'], ['LAFC', 'Seattle Sounders', 'Columbus Crew', 'LA Galaxy', 'Atlanta United'],
+    ['FC Cincinnati', 'Philadelphia Union', 'New York City FC', 'New England Revolution', 'Real Salt Lake', 'Austin FC', 'Orlando City', 'Portland Timbers', 'Minnesota United'],
+    ['Toronto FC', 'CF Montréal', 'Vancouver Whitecaps', 'Nashville SC', 'Charlotte FC']) },
+  { id: 'MX', n: 'Liga MX', c: 'MX', f: '🇲🇽', t: 1, np: true, ucl: 0, uel: 0, cl: T([70, 64, 58],
+    ['Club América', 'Tigres UANL', 'CF Monterrey'], ['Chivas Guadalajara', 'Cruz Azul', 'Pumas UNAM', 'Toluca', 'Pachuca', 'León'],
+    ['Santos Laguna', 'Atlas', 'Club Tijuana', 'Necaxa', 'Mazatlán', 'Querétaro', 'Puebla', 'FC Juárez', 'Atlético San Luis']) },
+  { id: 'JP', n: 'J1 League', c: 'JP', f: '🇯🇵', t: 1, np: true, ucl: 0, uel: 0, cl: T([66, 60, 54],
+    ['Vissel Kobe', 'Kawasaki Frontale', 'Yokohama F. Marinos', 'Sanfrecce Hiroshima'],
+    ['Urawa Red Diamonds', 'Kashima Antlers', 'Gamba Osaka', 'Cerezo Osaka', 'FC Tokyo', 'Nagoya Grampus'],
+    ['Kashiwa Reysol', 'Avispa Fukuoka', 'Albirex Niigata', 'Shonan Bellmare', 'Machida Zelvia', 'Tokyo Verdy', 'Consadole Sapporo', 'Kyoto Sanga']) },
+  { id: 'MA', n: 'Botola Pro', c: 'MA', f: '🇲🇦', t: 1, np: true, ucl: 0, uel: 0, cl: T([62, 56, 50],
+    ['Wydad Casablanca', 'Raja Casablanca', 'AS FAR'], ['RS Berkane', 'FUS Rabat', 'Maghreb de Fès', 'Hassania Agadir', 'Olympic Safi', 'Difaâ El Jadida'],
+    ['Moghreb Tétouan', 'IR Tanger', 'Youssoufia Berrechid', 'Mouloudia Oujda', 'US Touarga', 'Chabab Mohammédia', 'Renaissance de Zemamra']) },
+  { id: 'EG', n: 'Egyptian Premier League', c: 'EG', f: '🇪🇬', t: 1, np: true, ucl: 0, uel: 0, cl: T([66, 58, 52],
+    ['Al Ahly', 'Zamalek'], ['Pyramids FC', 'Al Masry', 'Ceramica Cleopatra', 'Future FC', 'Smouha', 'ENPPI'],
+    ['Al Ittihad Alexandrie', 'Zed FC', 'Modern Sport', 'Haras El Hodoud', 'El Gouna', 'Ismaily', 'Pharco', 'Petrojet', 'National Bank of Egypt', 'Baladiyat El Mahalla']) },
+  { id: 'ZA', n: 'Betway Premiership', c: 'ZA', f: '🇿🇦', t: 1, np: true, ucl: 0, uel: 0, cl: T([62, 56, 50],
+    ['Mamelodi Sundowns'], ['Orlando Pirates', 'Kaizer Chiefs', 'Stellenbosch FC', 'Cape Town City', 'SuperSport United'],
+    ['Sekhukhune United', 'AmaZulu', 'Golden Arrows', 'TS Galaxy', 'Chippa United', 'Polokwane City', 'Richards Bay', 'Magesi FC', 'Marumo Gallants', 'Royal AM']) }
 ];
+
+// Divisions de niveau 1 qui ont une division de niveau 2 dans le même pays (montées / descentes)
+const PAIRS = D.filter((d, i) => d.t === 1 && D[i + 1] && D[i + 1].t === 2 && D[i + 1].c === d.c);
 
 // Saison 1 : participants européens (clubs jouables + clubs étrangers "nom:niveau")
 const EU1 = {
