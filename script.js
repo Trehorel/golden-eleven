@@ -546,22 +546,10 @@ const views = {
     ? S.trophies.map(t => `<div class="card">🏆 <b>${t.t}</b> <span class="muted">· ${t.c} · à ${t.age} ans</span></div>`).join('')
     : '<div class="card muted">Aucun trophée pour le moment. Continue ta carrière !</div>'),
 
-  pantheon: () => `<h2>Panthéon</h2>` + (H.length
-    ? H.map(h => {
-        if (h.kind === 'M') {
-          const nat = NATS.find(n => n.n === h.nat), cnt = {};
-          h.trophies.forEach(t => cnt[t] = (cnt[t] || 0) + 1);
-          const list = Object.entries(cnt).map(([t, k]) => k > 1 ? `${t} ×${k}` : t);
-          return `<div class="card">👔 <b>${nat ? nat.f + ' ' : ''}${h.name}</b> <span class="muted">· Manager · retraite à ${h.age} ans</span>
-            <p class="muted">${h.seasons} saisons · ${h.titles} trophée(s)</p>
-            <p class="muted" style="font-size:13px">Clubs : ${h.clubs.join(' → ')}</p>
-            ${list.length ? `<p style="font-size:13px;margin-top:6px">🏆 ${list.join(' · ')}</p>` : ''}</div>`;
-        }
-        return `<div class="card">⚽ <b>${h.name}</b> <span class="muted">· ${POSTES[h.pos]} · ${h.club}</span>
-          <p class="muted">Pic ${h.peak} · ${h.goals} buts · ${h.trophies} trophées · ${h.bd} Ballon(s) d'Or</p></div>`;
-      }).join('')
-    : '<div class="card muted">Les légendes que tu auras écrites apparaîtront ici.</div>')
-};
+    pantheon: () => `<h2>Panthéon</h2>` + (H.length
+      ? H.map(pantheonCard).join('')
+      : '<div class="card muted">Les légendes que tu auras écrites apparaîtront ici.</div>')
+  };
 
 function render() {
   try {
