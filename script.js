@@ -52,7 +52,7 @@ const cKO = a => {
 
 // ---------- Nations : 65 pays, 5 continents ----------
 const POSTES = { ATT: 'Attaquant', MIL: 'Milieu', DEF: 'Défenseur', GAR: 'Gardien' };
-const GOALS = { ATT: 0.5, MIL: 0.2, DEF: 0.06, GAR: 0 };
+const GOALS = { ATT: 1, MIL: 0.5, DEF: 0.1, GAR: 0 };
 
 const CONT = { EU: 'Europe', AF: 'Afrique', SA: 'Amérique du Sud', NA: 'Amérique du Nord', AS: 'Asie' };
 // Compétition de sélections propre à chaque continent
@@ -412,7 +412,10 @@ function transfer(i) {
 
 function retire() {
   S.phase = 'end';
-  H.unshift({ name: S.name, pos: S.pos, goals: S.goals, bd: S.bd, trophies: S.trophies.length, peak: S.peak, club: CLUBS[S.club].n });
+  H.unshift({
+    kind: 'P', name: S.name, pos: S.pos, nat: S.natn, age: S.age, goals: S.goals, bd: S.bd, peak: S.peak,
+    trophies: S.trophies.length, tl: S.trophies, clubs: S.visited.map(i => CLUBS[i].n), club: CLUBS[S.club].n
+  });
   localStorage.setItem('g11h', JSON.stringify(H));
   checkBadges(); save(); render();
 }
@@ -442,6 +445,32 @@ const statsCard = () => {
     ${S.phase !== 'end' && S.age >= 30 ? `<br><button class="ghost" onclick="if (confirm('Prendre ta retraite ?')) retire()">🏁 Prendre ma retraite</button>` : ''}
   </div>`;
 };
+
+// ---------- Panthéon : détail d'une carrière et suppression ----------
+function delH(i) {
+  if (!confirm('Supprimer cette carrière du Panthéon ?')) return;
+  H.splice(i, 1);
+  localStorage.setItem('g11h', JSON.stringify(H));
+  render();
+}
+function pantheonCard(h, i) {
+  const nat = NATS.find(n => n.n === h.nat), fl = nat ? nat.f + ' ' : '';
+  const row = (t, extra) => `<div class="row"><span>🏆 ${t}</span><span class="muted">${extra}</span></div>`;
+  const del = `<br><button class="sm ghost" onclick="delH(${i})">🗑️ Supprimer cette carrière</button>`;
+  if (h.kind === 'M') {
+    const tl = h.tl || (h.trophies || []).map(t => ({ t }));
+    return `<details class="card"><summary>👔 <b>${fl}${h.name}</b> <span class="muted">· Manager · retraite à ${h.age} ans</span></summary>
+      <p class="muted">${h.seasons} saisons · ${h.titles} trophée(s)</p>
+      <p style="font-size:13px;margin:8px 0"><b>Clubs dirigés :</b> ${h.clubs.join(' → ')}</p>
+      ${tl.length ? tl.map(t => row(t.t, [t.c, t.s ? 'saison ' + t.s : ''].filter(Boolean).join(' · '))).join('') : '<p class="muted">Aucun trophée.</p>'}${del}</details>`;
+  }
+  const tl = h.tl;
+  return `<details class="card"><summary>⚽ <b>${fl}${h.name}</b> <span class="muted">· ${POSTES[h.pos]} · ${h.age ? 'retraite à ' + h.age + ' ans' : h.club}</span></summary>
+    <p class="muted">Poste : ${POSTES[h.pos]}${nat ? ' · ' + nat.n : ''}${h.age ? ' · retraite à ' + h.age + ' ans' : ''}</p>
+    <p class="muted">Pic ${h.peak} · ${h.goals} buts · ${h.trophies} trophée(s) · ${h.bd} Ballon(s) d'Or</p>
+    <p style="font-size:13px;margin:8px 0"><b>Clubs :</b> ${h.clubs ? h.clubs.join(' → ') : 'dernier club : ' + h.club}</p>
+    ${tl ? (tl.length ? tl.map(t => row(t.t, `${t.c || ''} · à ${t.age} ans`)).join('') : '<p class="muted">Aucun trophée.</p>') : '<p class="muted" style="font-size:13px">Détails non enregistrés pour cette ancienne carrière.</p>'}${del}</details>`;
+}
 
 const views = {
   home: () => `
