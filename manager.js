@@ -1,5 +1,5 @@
 // MODE MANAGER v3 : vrai manager (âge, parcours, philosophie), offres de clubs, retraite
-// (utilise rnd, clamp, load, toast, bar, views, render, NATS, CONT de script.js ; D, PAIRS, COUPES, EU1 de ligues.js)
+// (utilise rnd, clamp, load, toast, bar, views, render, NATS, CONT, H de script.js ; D, PAIRS, COUPES, EU1 de ligues.js)
 let M = load('g11m2', 'null');
 let MC = null;   // création du manager en cours
 const mSave = () => localStorage.setItem('g11m2', JSON.stringify(M));
@@ -207,8 +207,12 @@ function mJoin(i) {
   mSeason(); mMarket(); mSave(); render();
 }
 function mStay() { M.offers = []; M.phase = 'play'; mSave(); render(); }
+// La retraite du manager entre au Panthéon (trophées et clubs dirigés)
 function mRetire() {
   if (!confirm('Prendre ta retraite de manager ?')) return;
+  const g = M.mgr;
+  H.unshift({ kind: 'M', name: g.name, nat: g.natn, age: g.age, seasons: g.seasons, titles: g.titles, clubs: g.clubs, trophies: M.trophies.map(t => t.t) });
+  localStorage.setItem('g11h', JSON.stringify(H));
   M.phase = 'end'; mSave(); render();
 }
 function mNew() { M = null; MC = null; localStorage.removeItem('g11m2'); render(); }
@@ -436,6 +440,7 @@ function mEndView() {
   return `<div class="card"><h2>🏁 Retraite du manager</h2>
     <p><b>${nat ? nat.f + ' ' : ''}${g.name}</b> · ${g.age} ans · ${g.seasons} saisons · ${g.titles} trophée(s)</p>
     <p class="muted" style="margin:8px 0">Clubs dirigés : ${g.clubs.map(c => flag(c) + ' ' + c).join(' → ')}</p>
+    <p class="muted" style="margin-bottom:8px">Ta légende est entrée au Panthéon.</p>
     ${M.trophies.length ? M.trophies.map(t => `<div class="row"><span>🏆 ${t.t}${t.c ? ' · ' + t.c : ''}</span><span class="muted">saison ${t.s}</span></div>`).join('') : '<p class="muted">Aucun trophée.</p>'}
     <br><button onclick="mNew()">Nouvelle carrière de manager</button></div>`;
 }
